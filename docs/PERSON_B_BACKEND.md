@@ -1,5 +1,5 @@
 # 🟩 Person B — Backend API + Infrastructure Instructions
-## DataTalk | Python FastAPI + SQLite + ReportLab
+## DataTalk | Python FastAPI + DuckDB + ReportLab
 
 > **Your job:** Build the FastAPI backend that handles file uploads, proxies chat requests to Person C's agents, manages the semantic layer, generates PDFs, and handles all infrastructure (README, tests, .env, .gitignore). You are the **glue** between frontend and AI core.
 
@@ -18,6 +18,7 @@ mkdir backend\app\core
 mkdir backend\app\utils
 mkdir backend\tests
 mkdir backend\sample_data
+mkdir backend\sessions
 ```
 
 ### Step 2: Create `requirements.txt`
@@ -29,6 +30,7 @@ uvicorn[standard]==0.32.0
 python-multipart==0.0.12
 pandas==2.2.3
 numpy==2.1.3
+duckdb==1.2.1
 openpyxl==3.1.5
 python-dotenv==1.0.1
 reportlab==4.2.5
@@ -107,13 +109,15 @@ sessions = {}
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown lifecycle."""
+    os.makedirs("sessions", exist_ok=True)  # Ensure sessions dir exists on startup
     print("🚀 DataTalk Backend starting...")
     yield
-    # Cleanup: close all SQLite connections
+    # Cleanup: close all DuckDB connections and delete session .duckdb files
     for sid in list(sessions.keys()):
         if "db" in sessions[sid]:
             try:
                 sessions[sid]["db"].close()
+                sessions[sid]["db"].delete_file()  # Remove .duckdb file from disk
             except Exception:
                 pass
     sessions.clear()
@@ -157,44 +161,52 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ---
 
-### Task 2: `app/core/database.py` — SQLite Manager
+### Task 2: `app/core/database.py` — DuckDB Manager
 
 ```python
 """
-SQLite in-memory database manager.
-Each session gets its own in-memory SQLite database.
+DuckDB persistent database manager.
+Each session gets its own .duckdb file — survives server restarts.
+Far faster than SQLite for analytical queries on uploaded CSVs.
 """
-import sqlite3
+import os
+import duckdb
 import pandas as pd
 from typing import Any
 
+os.makedirs("sessions", exist_ok=True)
+
 
 class DatabaseManager:
-    """Manages per-session SQLite in-memory databases."""
+    """Manages per-session DuckDB databases stored as .duckdb files."""
 
-    def __init__(self):
-        self.connection = sqlite3.connect(":memory:", check_same_thread=False)
-        self.connection.row_factory = sqlite3.Row
+    def __init__(self, session_id: str):
+        self.session_id = session_id
+        self.db_path = f"sessions/{session_id}.duckdb"
+        self.connection = duckdb.connect(self.db_path)
         self.table_name = "data"
 
     def load_dataframe(self, df: pd.DataFrame, table_name: str = "data"):
-        """Load a pandas DataFrame into SQLite."""
+        """Load a pandas DataFrame into DuckDB as a persistent table."""
         self.table_name = table_name
-        df.to_sql(table_name, self.connection, if_exists="replace", index=False)
+        # Register DataFrame as a temporary view, then persist as a real table
+        self.connection.register("_df_temp", df)
+        self.connection.execute(f"DROP TABLE IF EXISTS {table_name}")
+        self.connection.execute(f"CREATE TABLE {table_name} AS SELECT * FROM _df_temp")
+        self.connection.unregister("_df_temp")
 
     def execute_query(self, sql: str) -> dict[str, Any]:
         """Execute a SQL query and return results."""
         try:
-            cursor = self.connection.cursor()
-            cursor.execute(sql)
-            columns = [description[0] for description in cursor.description] if cursor.description else []
-            rows = cursor.fetchall()
-            results = [dict(zip(columns, row)) for row in rows]
+            result = self.connection.execute(sql)
+            columns = [desc[0] for desc in result.description] if result.description else []
+            rows = result.fetchall()
+            data = [dict(zip(columns, row)) for row in rows]
             return {
                 "success": True,
-                "data": results,
+                "data": data,
                 "columns": columns,
-                "row_count": len(results),
+                "row_count": len(data),
             }
         except Exception as e:
             return {
@@ -208,16 +220,27 @@ class DatabaseManager:
     def get_row_count(self) -> int:
         """Get total row count of the main table."""
         try:
-            cursor = self.connection.cursor()
-            cursor.execute(f"SELECT COUNT(*) FROM {self.table_name}")
-            return cursor.fetchone()[0]
+            result = self.connection.execute(f"SELECT COUNT(*) FROM {self.table_name}")
+            return result.fetchone()[0]
         except Exception:
             return 0
 
     def close(self):
-        """Close the database connection."""
+        """Close the DuckDB connection."""
         try:
             self.connection.close()
+        except Exception:
+            pass
+
+    def delete_file(self):
+        """Delete the .duckdb file on session cleanup."""
+        try:
+            if os.path.exists(self.db_path):
+                os.remove(self.db_path)
+            # DuckDB may also create a .duckdb.wal write-ahead log
+            wal_path = self.db_path + ".wal"
+            if os.path.exists(wal_path):
+                os.remove(wal_path)
         except Exception:
             pass
 ```
@@ -454,8 +477,8 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
         # Create session
         session_id = str(uuid.uuid4())
 
-        # Create SQLite database and load data
-        db = DatabaseManager()
+        # Create DuckDB database (persistent .duckdb file) and load data
+        db = DatabaseManager(session_id)
         db.load_dataframe(df, table_name="data")
 
         # Extract schema and quality info
@@ -1249,8 +1272,9 @@ dist/
 .DS_Store
 Thumbs.db
 
-# Uploads
+# Uploads & Session Databases
 uploads/
+sessions/
 
 # Logs
 *.log
@@ -1280,7 +1304,7 @@ uploads/
 |---|---|
 | CORS errors from frontend | Make sure CORSMiddleware is configured with `allow_origins=["*"]` |
 | `ModuleNotFoundError` on routes | Make sure `__init__.py` files exist in `app/`, `app/routes/`, `app/agents/`, `app/core/`, `app/utils/` (empty files are fine) |
-| SQLite thread safety | Use `check_same_thread=False` in `sqlite3.connect()` |
+| DuckDB concurrent writes | Run Uvicorn with `--workers 1` (DuckDB file lock is per-process). Use PostgreSQL if you need multiple workers. |
 | File upload too large | Set `MAX_FILE_SIZE_MB` in .env, check in file_handler.py |
 | Person C's agents not ready | Use `_mock_response()` in chat.py until agents are connected |
 | PDF crashes on unicode | Sanitize all text with `sanitize_text()` function |

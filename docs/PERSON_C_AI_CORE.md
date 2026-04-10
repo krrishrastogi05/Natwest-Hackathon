@@ -14,24 +14,30 @@
 4. Copy the key
 5. Share with Person B to put in `backend/.env`
 
-### Step 2: Verify Person B's setup
-Make sure Person B has created:
-- `backend/app/main.py`
-- `backend/app/core/database.py`
-- `backend/app/core/schema.py`
-- `backend/requirements.txt` with `google-generativeai`, `duckduckgo-search`
+### Step 2: Verify Person B's setup is complete
+Person B has already created and tested:
+- ✅ `backend/app/main.py` — FastAPI server running on port 8000
+- ✅ `backend/app/core/database.py` — **DuckDB** manager (NOT SQLite)
+- ✅ `backend/app/core/schema.py` — schema + quality extractor
+- ✅ `backend/app/core/semantic_layer.py` — metric CRUD
+- ✅ `backend/requirements.txt` — includes `duckdb`, `google-generativeai`, `duckduckgo-search`
+- ✅ `backend/venv/` — virtual environment already set up
+- ✅ `backend/sample_data/banking_transactions.csv` — 2000-row demo dataset
 
-If Person B isn't ready yet, you can still build and test your agents standalone.
+> **IMPORTANT:** The database is DuckDB, NOT SQLite. Your SQL prompts must say "DuckDB SQL" not "SQLite SQL". DuckDB has better date functions and analytics support.
 
-### Step 3: Create `__init__.py` files (if not already done)
+### Step 3: Verify Person B's folder structure exists
 ```bash
-cd c:\Users\BIT\Documents\Super_Coding\Projects\Natwest_Project\backend
-echo. > app\__init__.py
-echo. > app\routes\__init__.py
-echo. > app\agents\__init__.py
-echo. > app\core\__init__.py
-echo. > app\utils\__init__.py
+# Person B already created this — just verify:
+ls /Users/gagansinghal/Desktop/Natwest-Hackathon/backend/app/agents/
+# Should see: __init__.py  orchestrator.py (stub)
+
+# Activate Person B's venv:
+cd /Users/gagansinghal/Desktop/Natwest-Hackathon/backend
+source venv/bin/activate
 ```
+
+> ✅ Person B has already scaffolded the folder, venv, and requirements. You just need to fill in the agent files.
 
 ### Step 4: Quick test that Gemini works
 ```python
@@ -65,7 +71,7 @@ User Question: "Why did revenue drop in March?"
   │NL→SQL  │ │DDG web │ │Result →    │
   │Execute │ │search  │ │Plain Eng.  │
   │on      │ │top 5   │ │+ sources   │
-  │SQLite  │ │results │ │+ confidence│
+  │DuckDB  │ │results │ │+ confidence│
   └───┬────┘ └───┬────┘ └──────┬─────┘
       │          │             │
       └──────────┴─────────────┘
@@ -253,7 +259,7 @@ from app.utils.gemini_client import gemini
 
 
 # System prompt for SQL generation
-SQL_SYSTEM_PROMPT = """You are a SQLite SQL expert. Given this database schema and metric definitions, generate ONLY a valid SQLite SQL query.
+SQL_SYSTEM_PROMPT = """You are a DuckDB SQL expert. Given this database schema and metric definitions, generate ONLY a valid DuckDB SQL query.
 
 Rules:
 1. ONLY reference columns that exist in the schema below.
@@ -263,9 +269,10 @@ Rules:
 5. For comparisons: include all relevant grouping columns.
 6. LIMIT 100 unless user specifies otherwise.
 7. The table name is always 'data'.
-8. For date filtering use: date(column_name) for comparisons.
+8. For date filtering use standard SQL: WHERE date_column >= '2024-01-01' (DuckDB handles ISO date strings natively).
 9. Output ONLY the raw SQL query — no markdown, no explanation, no backticks, no code fences.
 10. If the question cannot be answered with the given schema, return: SELECT 'CANNOT_ANSWER' as error;
+11. DuckDB supports STRFTIME, DATE_TRUNC, DATE_DIFF, and standard window functions — use them for time analysis.
 """
 
 # System prompt for chart recommendation
@@ -1342,22 +1349,23 @@ async def test_all():
     df = pd.read_csv("sample_data/banking_transactions.csv")
     print(f"✅ Loaded {len(df)} rows, {len(df.columns)} columns")
 
-    # Set up session-like dict
+    # Set up session-like dict (mirrors Person B's session structure exactly)
     from app.core.database import DatabaseManager
     from app.core.schema import extract_schema
     from app.core.semantic_layer import SemanticLayerManager
 
-    db = DatabaseManager()
+    # ⚠️ DatabaseManager now requires a session_id — creates sessions/test_session.duckdb
+    db = DatabaseManager("test_session")
     db.load_dataframe(df)
     schema = extract_schema(df)
     semantic = SemanticLayerManager()
     semantic.add_metric("revenue", "SUM(amount)", "Total transaction amount")
 
     session = {
-        "db": db,
-        "df": df,
-        "schema": schema,
-        "semantic_layer": semantic,
+        "db": db,        # DuckDB DatabaseManager — has execute_query(), get_row_count()
+        "df": df,        # pandas DataFrame — used by code_agent
+        "schema": schema,         # list of {name, type, sample_values, missing_pct}
+        "semantic_layer": semantic, # SemanticLayerManager — has to_json(), get_metrics()
     }
 
     # Test 1: SQL Agent
