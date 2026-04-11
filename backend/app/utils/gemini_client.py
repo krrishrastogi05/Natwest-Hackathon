@@ -24,8 +24,7 @@ _call_lock = asyncio.Lock()
 _MIN_CALL_INTERVAL = 0.5  # seconds between calls
 
 # Default model — use a valid, available model
-_UNSOLICITED_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
-DEFAULT_MODEL = _UNSOLICITED_MODEL.replace("models/", "")
+DEFAULT_MODEL = os.getenv("GEMINI_MODEL")
 
 
 class GeminiClient:

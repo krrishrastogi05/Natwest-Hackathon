@@ -108,6 +108,11 @@ export default function ChatMessage({ message, onSendMessage }) {
               <MarkdownContent content={message.content} />
             </div>
 
+            {/* Raw data table (shown when summary is blocked for sensitive data) */}
+            {message.data && message.data.length > 0 && (
+              <DataTable data={message.data} />
+            )}
+
             {/* SQL Query (collapsible) */}
             {message.sql_query && (
               <CodeBlock code={message.sql_query} language="sql" title="SQL Query" />
@@ -207,5 +212,44 @@ function MarkdownContent({ content }) {
     >
       {content}
     </ReactMarkdown>
+  );
+}
+
+/* ──── Raw Data Table ──── */
+function DataTable({ data }) {
+  if (!data || data.length === 0) return null;
+  const headers = Object.keys(data[0]);
+  return (
+    <div className="mt-3 overflow-x-auto rounded-lg border border-[#2a2a4a]/50">
+      <table className="w-full text-[11px] border-collapse">
+        <thead>
+          <tr className="bg-[#1a1a2e]">
+            {headers.map(h => (
+              <th key={h} className="px-3 py-2 text-left text-[#a0a0c0] font-semibold border-b border-[#2a2a4a]/50 whitespace-nowrap">
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.slice(0, 100).map((row, i) => (
+            <tr key={i} className={i % 2 === 0 ? 'bg-[#0f0f1e]/60' : 'bg-[#16162a]/40'}>
+              {headers.map(h => (
+                <td key={h} className="px-3 py-1.5 text-[#c8c8e0] border-b border-[#2a2a4a]/30 whitespace-nowrap">
+                  {row[h] === null || row[h] === undefined
+                    ? <span className="text-[#4a4a6a] italic">null</span>
+                    : String(row[h])}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {data.length > 100 && (
+        <p className="text-[10px] text-[#6a6a8a] text-center py-1.5 border-t border-[#2a2a4a]/30">
+          Showing 100 of {data.length} rows
+        </p>
+      )}
+    </div>
   );
 }

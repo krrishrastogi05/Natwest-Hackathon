@@ -58,6 +58,7 @@ async def process_question(
     semantic_layer = session.get("semantic_layer")
     include_chart = options.get("include_chart", True)
     include_web = options.get("include_web_search", True)
+    sensitive_columns = options.get("sensitive_columns", [])
 
     # Step 1: Classify the question
     classification = await _classify_question(question, schema, semantic_layer)
@@ -158,28 +159,39 @@ async def process_question(
         except Exception:
             web_results = []
 
-    # Step 4: Generate plain English explanation
-    explanation_data = result.get("data", [])
-    if result.get("stdout"):
-        explanation_data = result["stdout"]
+    # Step 4: Generate plain English explanation OR bypass if sensitive
+    has_sensitive_data = False
+    if sensitive_columns and result.get("columns_used"):
+        sensitive_lower = [c.lower() for c in sensitive_columns]
+        for c in result["columns_used"]:
+            if c.lower() in sensitive_lower:
+                has_sensitive_data = True
+                break
 
-    try:
-        answer = await run_explain_agent(
-            question=question,
-            result_data=explanation_data,
-            agent_type=result.get("agent_used", "unknown"),
-            sql_query=result.get("sql_query"),
-            python_code=result.get("python_code"),
-            columns_used=result.get("columns_used", []),
-            row_count=result.get("row_count", 0),
-            total_rows=result.get("total_rows", 0),
-            web_results=web_results if web_results else None,
-        )
-    except Exception as e:
-        answer = result.get(
-            "stdout",
-            f"I analyzed your question but couldn't generate a summary. Error: {str(e)}",
-        )
+    if has_sensitive_data:
+        answer = "⚠️ **Security Notice:** The results contain sensitive columns you have specified. To prevent data leakage, an AI-generated summary is not available for this query, but you can view the direct result below."
+    else:
+        explanation_data = result.get("data", [])
+        if result.get("stdout"):
+            explanation_data = result["stdout"]
+
+        try:
+            answer = await run_explain_agent(
+                question=question,
+                result_data=explanation_data,
+                agent_type=result.get("agent_used", "unknown"),
+                sql_query=result.get("sql_query"),
+                python_code=result.get("python_code"),
+                columns_used=result.get("columns_used", []),
+                row_count=result.get("row_count", 0),
+                total_rows=result.get("total_rows", 0),
+                web_results=web_results if web_results else None,
+            )
+        except Exception as e:
+            answer = result.get(
+                "stdout",
+                f"I analyzed your question but couldn't generate a summary. Error: {str(e)}",
+            )
 
     # For general questions, use the pre-built answer
     if category == "general" and result.get("answer"):
@@ -219,6 +231,7 @@ async def process_question(
         "python_code": result.get("python_code"),
         "chart": result.get("chart"),
         "matplotlib_image": result.get("matplotlib_image"),
+        "data": result.get("data", []),          # Raw rows — shown in table for sensitive queries
         "confidence": confidence,
         "sources": sources,
         "from_cache": False,

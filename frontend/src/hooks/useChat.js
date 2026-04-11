@@ -10,6 +10,7 @@ export function useChat() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [semanticLayer, setSemanticLayer] = useState([]);
+  const [sensitiveColumns, setSensitiveColumns] = useState([]);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -61,11 +62,12 @@ export function useChat() {
     setError(null);
 
     try {
-      const data = await api.askQuestion(sessionId, question);
+      const data = await api.askQuestion(sessionId, question, { sensitive_columns: sensitiveColumns });
       const aiMsg = {
         id: Date.now() + 1,
         role: 'assistant',
         content: data.answer,
+        data: data.data || [],
         sql_query: data.sql_query,
         python_code: data.python_code,
         chart: data.chart,
@@ -89,7 +91,7 @@ export function useChat() {
       setIsLoading(false);
       setTimeout(scrollToBottom, 100);
     }
-  }, [sessionId]);
+  }, [sessionId, sensitiveColumns]);
 
   // Export PDF
   const exportPDF = useCallback(async () => {
@@ -110,11 +112,13 @@ export function useChat() {
     setDataQuality(null);
     setError(null);
     setSemanticLayer([]);
+    setSensitiveColumns([]);
   }, []);
 
   return {
     messages, sessionId, fileInfo, schema, dataQuality,
     isLoading, error, semanticLayer, messagesEndRef,
+    sensitiveColumns, setSensitiveColumns,
     handleUpload, sendMessage, exportPDF, resetChat,
     setSemanticLayer, setError,
   };
