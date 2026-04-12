@@ -186,6 +186,12 @@ async def process_question(
         answer = result["answer"]
 
     # Step 5: Calculate confidence score
+    # Diagnostic: compute real-time null ratios for the columns used in this specific result
+    null_counts = {}
+    if result.get("data") and result.get("columns_used"):
+        for col in result["columns_used"]:
+            null_counts[col] = sum(1 for row in result["data"] if row.get(col) is None)
+    
     confidence = calculate_confidence(
         rows_used=result.get("row_count", 0),
         total_rows=result.get("total_rows", 0),
@@ -193,6 +199,8 @@ async def process_question(
         schema=schema,
         question=question,
         web_results=web_results,
+        sql_query=result.get("sql_query"),
+        null_counts=null_counts,
         sql_error=result.get("error"),
     )
 

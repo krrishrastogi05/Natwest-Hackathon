@@ -4,12 +4,14 @@ import FileUpload from './components/FileUpload';
 import ChatMessage from './components/ChatMessage';
 import ChatInput from './components/ChatInput';
 import WelcomeScreen from './components/WelcomeScreen';
+import SplashScreen from './components/SplashScreen';
 import Sidebar from './components/Sidebar';
 import { useChat } from './hooks/useChat';
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showUpload, setShowUpload] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
   
   const chat = useChat();
 
@@ -24,8 +26,10 @@ function App() {
   const hasMessages = chat.messages.length > 0;
 
   return (
-    <div className="h-screen flex bg-mesh overflow-hidden">
-      {/* ──── Sidebar ──── */}
+    <>
+      {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
+      <div className="h-screen flex bg-mesh overflow-hidden">
+        {/* ──── Sidebar ──── */}
       <Sidebar
         isOpen={sidebarOpen}
         fileData={chat.fileInfo}
@@ -122,6 +126,7 @@ function App() {
         </div>
       </main>
     </div>
+    </>
   );
 }
 
