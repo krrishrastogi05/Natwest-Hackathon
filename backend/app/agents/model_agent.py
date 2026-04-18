@@ -306,16 +306,14 @@ def run_inference(
         else:
             X = X[:, :3]
 
-    # Extract real ground-truth labels from days_past_due (default = DPD >= 90)
+    # Extract real ground-truth labels
+    # Priority: days_past_due >= 90 (numeric) > asset_classification (categorical)
     y_true = None
-    target_hint = info.get("target_hint")
-    if target_hint and target_hint in _df.columns:
-        y_true = (_df[target_hint].fillna(0) >= 90).astype(int).values
-    elif "days_past_due" in _df.columns:
+    if "days_past_due" in _df.columns and pd.api.types.is_numeric_dtype(_df["days_past_due"]):
         y_true = (_df["days_past_due"].fillna(0) >= 90).astype(int).values
     elif "asset_classification" in _df.columns:
-        bad_assets = {"NPA", "Substandard", "Doubtful", "Loss", "npa", "substandard", "doubtful", "loss"}
-        y_true = _df["asset_classification"].isin(bad_assets).astype(int).values
+        bad_assets = {"NPA", "Substandard", "Doubtful", "Loss"}
+        y_true = _df["asset_classification"].astype(str).str.strip().isin(bad_assets).astype(int).values
 
     from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 
