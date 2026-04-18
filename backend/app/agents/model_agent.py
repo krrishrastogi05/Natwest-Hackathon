@@ -14,6 +14,11 @@ import joblib
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
 
 MODELS_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
 
@@ -124,22 +129,48 @@ def get_available_use_cases() -> List[Dict]:
     return result
 
 
+FEATURE_ALIASES: Dict[str, List[str]] = {
+    "loan_amount":       ["principal_amount", "loan_amt", "loanamount", "principalamount"],
+    "customer_income":   ["annual_income", "income", "salary", "annual_salary", "customerincome"],
+    "credit_score":      ["cibil_score", "fico_score", "creditscore", "cibilscore"],
+    "interest_rate":     ["rate_of_interest", "interest", "rate", "interestrate"],
+    "collateral_value":  ["property_value", "asset_value", "collateral", "collateralvalue", "propertyvalue"],
+    "tenure_months":     ["loan_term", "tenure", "term_months", "tenuremonths"],
+    "account_balance":   ["balance", "accountbalance"],
+    "num_products":      ["products", "numproducts", "product_count"],
+    "digital_active":    ["digital", "digitalactive", "online_active"],
+}
+
+
 def auto_map_columns(schema: List[Dict], required_features: List[str]) -> Dict[str, str]:
-    """Auto-map schema columns to required feature names by fuzzy name matching."""
+    """Auto-map schema columns to required feature names by alias + fuzzy matching."""
     mapping = {}
-    col_names = [c["name"] for c in schema]
     numeric_cols = [c["name"] for c in schema if c.get("type", "") in ("INTEGER","REAL","FLOAT","NUMERIC","BIGINT","DOUBLE")]
 
     for feat in required_features:
+        # 1) Exact match
+        if feat in numeric_cols:
+            mapping[feat] = feat
+            continue
+        # 2) Known alias lookup
+        found = None
+        for alias in FEATURE_ALIASES.get(feat, []):
+            for col in numeric_cols:
+                if col.lower().replace("_", "") == alias.lower().replace("_", ""):
+                    found = col
+                    break
+            if found:
+                break
+        if found:
+            mapping[feat] = found
+            continue
+        # 3) Fuzzy substring match
         feat_lower = feat.lower().replace("_", "")
-        best = None
         for col in numeric_cols:
             col_lower = col.lower().replace("_", "")
             if feat_lower == col_lower or feat_lower in col_lower or col_lower in feat_lower:
-                best = col
+                mapping[feat] = col
                 break
-        if best:
-            mapping[feat] = best
 
     return mapping
 
@@ -239,41 +270,93 @@ def run_inference(
     feature_names_path = os.path.join(models_dir, "feature_names.joblib")
     feature_names = joblib.load(feature_names_path) if os.path.exists(feature_names_path) else info["required_features"]
 
+    # Derive computed columns before building feature matrix
+    _df = df.copy()
+    if "ltv_ratio" not in _df.columns:
+        loan_col = column_mapping.get("loan_amount")
+        collateral_col = column_mapping.get("collateral_value")
+        if loan_col and collateral_col and loan_col in _df.columns and collateral_col in _df.columns:
+            denom = _df[collateral_col].replace(0, np.nan)
+            _df["ltv_ratio"] = (_df[loan_col] / denom).fillna(0).clip(0, 5)
+            column_mapping["ltv_ratio"] = "ltv_ratio"
+    if "tenure_months" not in _df.columns:
+        for alias in ["loan_term", "tenure", "term_months"]:
+            if alias in _df.columns:
+                _df["tenure_months"] = _df[alias]
+                column_mapping["tenure_months"] = "tenure_months"
+                break
+
     # Build full feature matrix — zero-fill missing features so model never sees wrong shape
-    n_rows = len(df)
+    n_rows = len(_df)
     X = np.zeros((n_rows, len(feature_names)))
     used_features = list(feature_names)
     mapped_count = 0
     for j, feat in enumerate(feature_names):
         col = column_mapping.get(feat)
-        if col and col in df.columns:
-            X[:, j] = df[col].fillna(0).astype(float)
+        if col and col in _df.columns:
+            X[:, j] = _df[col].fillna(0).astype(float)
             mapped_count += 1
 
     if mapped_count == 0:
         return {"error": "Could not map any columns to model features. Please adjust the column mapping."}
 
     if use_case == "anomaly_detection":
-        # Anomaly model trained on 3 features; pad or truncate
         if X.shape[1] < 3:
             X = np.hstack([X, np.ones((n_rows, 3 - X.shape[1]))])
         else:
             X = X[:, :3]
+
+    # Extract real ground-truth labels from days_past_due (default = DPD >= 90)
+    y_true = None
+    target_hint = info.get("target_hint")
+    if target_hint and target_hint in _df.columns:
+        y_true = (_df[target_hint].fillna(0) >= 90).astype(int).values
+    elif "days_past_due" in _df.columns:
+        y_true = (_df["days_past_due"].fillna(0) >= 90).astype(int).values
+    elif "asset_classification" in _df.columns:
+        bad_assets = {"NPA", "Substandard", "Doubtful", "Loss", "npa", "substandard", "doubtful", "loss"}
+        y_true = _df["asset_classification"].isin(bad_assets).astype(int).values
+
+    from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+
+    # Decide whether to train fresh models on uploaded data
+    can_train_fresh = (
+        y_true is not None
+        and len(np.unique(y_true)) == 2
+        and y_true.sum() >= 10
+        and use_case != "anomaly_detection"
+    )
+
+    FRESH_MODEL_MAP = {
+        "random_forest": RandomForestClassifier(
+            n_estimators=100, max_depth=8, random_state=42, n_jobs=-1, class_weight="balanced"
+        ),
+        "gradient_boosting": GradientBoostingClassifier(
+            n_estimators=100, learning_rate=0.1, max_depth=5, random_state=42
+        ),
+        "logistic_regression": Pipeline([
+            ("scaler", StandardScaler()),
+            ("clf", LogisticRegression(max_iter=1000, random_state=42, class_weight="balanced")),
+        ]),
+    }
+
+    if can_train_fresh:
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y_true, test_size=0.2, random_state=42, stratify=y_true
+        )
 
     metrics = {}
     feature_importance_data = []
     scored_sample = []
 
     for model_name in models_selected:
-        model_path = os.path.join(models_dir, f"{model_name}.joblib")
-        if not os.path.exists(model_path):
-            continue
-
-        model = joblib.load(model_path)
-
         if use_case == "anomaly_detection":
+            model_path = os.path.join(models_dir, f"{model_name}.joblib")
+            if not os.path.exists(model_path):
+                continue
+            model = joblib.load(model_path)
             scores = model.decision_function(X)
-            preds = model.predict(X)  # -1 = anomaly, 1 = normal
+            preds = model.predict(X)
             anomaly_count = int((preds == -1).sum())
             metrics[model_name] = {
                 "anomalies_detected": anomaly_count,
@@ -284,49 +367,74 @@ def run_inference(
                 {"row": int(i), "anomaly_score": round(float(scores[i]), 4), "is_anomaly": bool(preds[i] == -1)}
                 for i in np.argsort(scores)[:20]
             ]
+            continue
+
+        # Classification: train fresh on uploaded data when real labels exist
+        if can_train_fresh and model_name in FRESH_MODEL_MAP:
+            import copy
+            fresh_model = copy.deepcopy(FRESH_MODEL_MAP[model_name])
+            fresh_model.fit(X_train, y_train)
+            proba = fresh_model.predict_proba(X_test)[:, 1]
+            preds = (proba >= 0.5).astype(int)
+            y_eval = y_test
+            eval_model = fresh_model
         else:
+            model_path = os.path.join(models_dir, f"{model_name}.joblib")
+            if not os.path.exists(model_path):
+                continue
+            model = joblib.load(model_path)
             proba = model.predict_proba(X)[:, 1] if hasattr(model, "predict_proba") else model.predict(X).astype(float)
             preds = (proba >= 0.5).astype(int)
+            if y_true is not None and len(np.unique(y_true)) == 2:
+                y_eval = y_true
+            else:
+                # Last resort: synthetic 50/50 split by median — explicitly flagged
+                threshold = float(np.median(proba))
+                y_eval = (proba >= threshold).astype(int)
+            eval_model = model
 
-            # Synthetic labels for metrics (50/50 split by median probability)
-            threshold = float(np.median(proba))
-            y_synth = (proba >= threshold).astype(int)
-            from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
-            metrics[model_name] = {
-                "accuracy": round(accuracy_score(y_synth, preds), 4),
-                "precision": round(precision_score(y_synth, preds, zero_division=0), 4),
-                "recall": round(recall_score(y_synth, preds, zero_division=0), 4),
-                "f1": round(f1_score(y_synth, preds, zero_division=0), 4),
-                "auc_roc": round(roc_auc_score(y_synth, proba), 4),
-            }
-            scored_sample = [
-                {"row": int(i), "probability": round(float(proba[i]), 4), "prediction": int(preds[i])}
-                for i in np.argsort(proba)[::-1][:20]
-            ]
+        metrics[model_name] = {
+            "accuracy": round(accuracy_score(y_eval, preds), 4),
+            "precision": round(precision_score(y_eval, preds, zero_division=0), 4),
+            "recall": round(recall_score(y_eval, preds, zero_division=0), 4),
+            "f1": round(f1_score(y_eval, preds, zero_division=0), 4),
+            "auc_roc": round(roc_auc_score(y_eval, proba), 4),
+        }
+        scored_sample = [
+            {"row": int(i), "probability": round(float(proba[i]), 4), "prediction": int(preds[i])}
+            for i in np.argsort(proba)[::-1][:20]
+        ]
 
-            # Feature importance
-            if not feature_importance_data:
-                if hasattr(model, "feature_importances_"):
-                    fi = model.feature_importances_
-                    feature_importance_data = sorted(
-                        [{"feature": used_features[j], "importance": round(float(fi[j]), 4)} for j in range(len(used_features))],
-                        key=lambda x: x["importance"], reverse=True,
-                    )
-                elif hasattr(model, "named_steps") and hasattr(model.named_steps.get("clf"), "coef_"):
-                    coef = np.abs(model.named_steps["clf"].coef_[0])
-                    feature_importance_data = sorted(
-                        [{"feature": used_features[j], "importance": round(float(coef[j]), 4)} for j in range(len(used_features))],
-                        key=lambda x: x["importance"], reverse=True,
-                    )
+        if not feature_importance_data:
+            if hasattr(eval_model, "feature_importances_"):
+                fi = eval_model.feature_importances_
+                feature_importance_data = sorted(
+                    [{"feature": used_features[j], "importance": round(float(fi[j]), 4)} for j in range(len(used_features))],
+                    key=lambda x: x["importance"], reverse=True,
+                )
+            elif hasattr(eval_model, "named_steps") and hasattr(eval_model.named_steps.get("clf"), "coef_"):
+                coef = np.abs(eval_model.named_steps["clf"].coef_[0])
+                feature_importance_data = sorted(
+                    [{"feature": used_features[j], "importance": round(float(coef[j]), 4)} for j in range(len(used_features))],
+                    key=lambda x: x["importance"], reverse=True,
+                )
 
     fi_chart = _feature_importance_chart(feature_importance_data) if feature_importance_data else None
     metrics_chart = _metrics_chart(metrics) if metrics else None
 
-    partial_note = (
-        f"Note: {mapped_count}/{len(feature_names)} expected features were found in this dataset. "
-        "Missing features were zero-filled. Results are indicative only — upload a dataset "
-        "with the expected columns for accurate predictions."
-    ) if mapped_count < len(feature_names) else ""
+    notes = []
+    if mapped_count < len(feature_names):
+        notes.append(
+            f"{mapped_count}/{len(feature_names)} expected features found; missing features zero-filled."
+        )
+    if can_train_fresh:
+        pos = int(y_true.sum())
+        notes.append(
+            f"Models trained fresh on your data ({len(X_train)} rows, {pos} defaults). "
+            f"Metrics evaluated on held-out {len(X_test)}-row test set."
+        )
+    elif y_true is None:
+        notes.append("No ground-truth column found — metrics use synthetic labels and are indicative only.")
 
     return {
         "use_case": use_case,
@@ -338,5 +446,5 @@ def run_inference(
         "predictions_sample": scored_sample[:10],
         "precomputed": False,
         "rows_analyzed": len(X),
-        "note": partial_note,
+        "note": " ".join(notes),
     }
