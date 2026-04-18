@@ -1,5 +1,5 @@
 import React from 'react';
-import { PanelLeftClose, PanelLeft, BarChart2, Download, FlaskConical, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { PanelLeftClose, PanelLeft, BarChart2, Download, FlaskConical, ShieldCheck, ShieldAlert, Globe } from 'lucide-react';
 
 export default function TopBar({
   sidebarOpen,
@@ -8,6 +8,7 @@ export default function TopBar({
   sessionId,
   onExportPDF,
   onOpenModelLab,
+  onOpenGlobe,
   complianceStatus,
 }) {
   const tableNames   = Object.keys(tables);
@@ -60,6 +61,16 @@ export default function TopBar({
         </div>
       )}
 
+
+      {/* Financial Globe button */}
+      <button
+        className="topbar-btn"
+        onClick={onOpenGlobe}
+        title="Open Financial Globe"
+      >
+        <Globe size={14} />
+        <span>Globe</span>
+      </button>
 
       {/* Model Lab button */}
       <button
