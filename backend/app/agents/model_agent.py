@@ -276,8 +276,9 @@ def run_inference(
         loan_col = column_mapping.get("loan_amount")
         collateral_col = column_mapping.get("collateral_value")
         if loan_col and collateral_col and loan_col in _df.columns and collateral_col in _df.columns:
-            denom = _df[collateral_col].replace(0, np.nan)
-            _df["ltv_ratio"] = (_df[loan_col] / denom).fillna(0).clip(0, 5)
+            loan_num = pd.to_numeric(_df[loan_col], errors="coerce")
+            col_num = pd.to_numeric(_df[collateral_col], errors="coerce").replace(0, np.nan)
+            _df["ltv_ratio"] = (loan_num / col_num).fillna(0).clip(0, 5)
             column_mapping["ltv_ratio"] = "ltv_ratio"
     if "tenure_months" not in _df.columns:
         for alias in ["loan_term", "tenure", "term_months"]:
@@ -294,7 +295,8 @@ def run_inference(
     for j, feat in enumerate(feature_names):
         col = column_mapping.get(feat)
         if col and col in _df.columns:
-            X[:, j] = _df[col].fillna(0).astype(float)
+            vals = pd.to_numeric(_df[col], errors="coerce").fillna(0)
+            X[:, j] = vals.astype(float)
             mapped_count += 1
 
     if mapped_count == 0:
@@ -309,11 +311,15 @@ def run_inference(
     # Extract real ground-truth labels
     # Priority: days_past_due >= 90 (numeric) > asset_classification (categorical)
     y_true = None
-    if "days_past_due" in _df.columns and pd.api.types.is_numeric_dtype(_df["days_past_due"]):
-        y_true = (_df["days_past_due"].fillna(0) >= 90).astype(int).values
-    elif "asset_classification" in _df.columns:
-        bad_assets = {"NPA", "Substandard", "Doubtful", "Loss"}
-        y_true = _df["asset_classification"].astype(str).str.strip().isin(bad_assets).astype(int).values
+    try:
+        if "days_past_due" in _df.columns:
+            dpd = pd.to_numeric(_df["days_past_due"], errors="coerce").fillna(0)
+            y_true = (dpd >= 90).astype(int).values
+        elif "asset_classification" in _df.columns:
+            bad_assets = {"NPA", "Substandard", "Doubtful", "Loss"}
+            y_true = _df["asset_classification"].astype(str).str.strip().isin(bad_assets).astype(int).values
+    except Exception:
+        y_true = None
 
     from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 
