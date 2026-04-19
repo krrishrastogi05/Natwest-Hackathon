@@ -176,6 +176,9 @@ async def process_question(
         explanation_data = result.get("data", [])
         if result.get("stdout"):
             explanation_data = result["stdout"]
+        # For web-search answers the primary data IS the web results
+        if not explanation_data and web_results:
+            explanation_data = web_results
         try:
             answer = await run_explain_agent(
                 question=question,
@@ -240,7 +243,7 @@ async def process_question(
         "confidence": confidence,
         "sources": sources,
         "suggestions": suggestions,
-        "web_context": parallel_web_results if parallel_web_results else (web_results if web_search_toggle else []),
+        "web_context": web_results,
         "compliance": compliance_result,
         "from_cache": False,
     }

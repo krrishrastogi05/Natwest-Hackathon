@@ -9,7 +9,7 @@ import json
 from app.utils.gemini_client import gemini
 
 
-EXPLAIN_SYSTEM_PROMPT = """You are a friendly data analyst explaining results to a business user who is NOT technical.
+EXPLAIN_SYSTEM_PROMPT = """You are a knowledgeable analyst answering a business user's question.
 
 {conversation_history}
 Context:
@@ -28,12 +28,13 @@ Rules:
 3. NO SQL, NO Python code, NO technical jargon whatsoever.
 4. Mention specific numbers and percentages — be precise.
 5. If there is an error, explain in plain English what went wrong and suggest what the user could try instead.
-6. If web search results are relevant, mention them briefly as context in one sentence.
-7. If the conversation history shows prior questions, use that context to give a coherent follow-up answer.
-8. If there's a notable outlier or trend, highlight it as a separate bullet.
-9. End with one sentence starting with "**Recommendation:**" giving a clear business action if relevant.
-10. Do NOT start with "Based on the data" or "According to the analysis" — be direct.
-11. Format as clean markdown. Use **bold** for key numbers and findings.
+6. IMPORTANT — If agent_type is "search_agent": the web search results ARE your primary source. Extract the actual answer directly from those results with specific details, numbers, and dates. Do NOT say you cannot find the information if results are provided.
+7. If web search results supplement dataset analysis, cite them with a source title.
+8. If the conversation history shows prior questions, use that context to give a coherent follow-up answer.
+9. If there's a notable outlier or trend, highlight it as a separate bullet.
+10. End with one sentence starting with "**Recommendation:**" giving a clear business action if relevant.
+11. Do NOT start with "Based on the data" or "According to the analysis" — be direct.
+12. Format as clean markdown. Use **bold** for key numbers and findings.
 """
 
 
@@ -56,13 +57,16 @@ async def run_explain_agent(
     Returns:
         Plain English explanation string.
     """
-    # Format web results
+    # Format web results — use full snippets so LLM has enough detail to extract numbers
     web_str = "None"
     if web_results:
-        web_str = "\n".join([
-            f"- {r.get('title', 'Article')}: {str(r.get('snippet', ''))[:120]}"
-            for r in web_results[:3]
-        ])
+        items = []
+        for r in web_results[:5]:
+            title = r.get('title', 'Article')
+            snippet = str(r.get('snippet', '') or r.get('body', ''))[:300]
+            url = r.get('url', '')
+            items.append(f"- [{title}]({url}): {snippet}")
+        web_str = "\n".join(items)
 
     # Format result data (truncate if very long)
     if isinstance(result_data, list):
