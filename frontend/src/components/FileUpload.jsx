@@ -30,7 +30,7 @@ export default function FileUpload({ onFileLoaded, disabled }) {
   if (loadedFile) {
     return (
       <div className="dropzone has-file" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px', cursor: 'default' }}>
-        <div style={{ width: 40, height: 40, borderRadius: 10, background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(0,122,77,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <CheckCircle size={20} style={{ color: 'var(--success)' }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -95,7 +95,7 @@ export default function FileUpload({ onFileLoaded, disabled }) {
       </div>
 
       {error && (
-        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 7, padding: '9px 12px', borderRadius: 8, background: '#fef2f2', border: '1px solid rgba(220,38,38,0.2)' }}>
+        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 7, padding: '9px 12px', borderRadius: 8, background: 'rgba(192,57,43,0.06)', border: '1px solid rgba(192,57,43,0.2)' }}>
           <AlertCircle size={14} style={{ color: 'var(--error)', flexShrink: 0 }} />
           <span style={{ fontSize: 12, color: 'var(--error)' }}>{error}</span>
         </div>

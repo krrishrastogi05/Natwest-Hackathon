@@ -9,7 +9,7 @@ const DEFAULT_COMPLIANCE_GUIDELINES = [
     icon: Scale,
     title: 'IRAC Norms',
     subtitle: 'Income Recognition & Asset Classification',
-    color: '#ef4444',
+    color: '#c0392b',
     rules: [
       { label: 'NPA Definition', text: 'A loan account immediately becomes a Non-Performing Asset (NPA) when interest or principal remains overdue for more than 90 consecutive days. Correct classification must happen on a daily basis.' },
       { label: 'SMA-0', text: 'Early warning signal. Represents accounts where principal or interest is overdue between 1 to 30 days.' },
@@ -25,7 +25,7 @@ const DEFAULT_COMPLIANCE_GUIDELINES = [
     icon: Users,
     title: 'PSL Guidelines',
     subtitle: 'Priority Sector Lending',
-    color: '#22c55e',
+    color: '#007a4d',
     rules: [
       { label: 'Overall Target', text: 'Mandates that 40% of a bank\'s Adjusted Net Bank Credit (ANBC) or Credit Equivalent Amount of Off-Balance Sheet Exposure (CEOBE) is directed to priority sectors.' },
       { label: 'Agriculture', text: '18% of ANBC must be allocated to agriculture. This encompasses farm credit, agriculture infrastructure, and ancillary activities.' },
@@ -40,7 +40,7 @@ const DEFAULT_COMPLIANCE_GUIDELINES = [
     icon: AlertTriangle,
     title: 'PMLA / AML',
     subtitle: 'Prevention of Money Laundering',
-    color: '#f59e0b',
+    color: '#b45309',
     rules: [
       { label: 'CTR Threshold Requirements', text: 'Every cash transaction aggregating to ₹10 lakh or more (or its equivalent in foreign currency) must be mandatorily reported via a Cash Transaction Report (CTR).' },
       { label: 'STR Filing Obligation', text: 'Suspicious Transaction Reports (STRs) must be filed with the Financial Intelligence Unit (FIU-IND) whenever a transaction exhibits unusual patterns, regardless of the monetary amount.' },
@@ -55,7 +55,7 @@ const DEFAULT_COMPLIANCE_GUIDELINES = [
     icon: Lock,
     title: 'DPDP Act 2023',
     subtitle: 'Digital Personal Data Protection',
-    color: '#a855f7',
+    color: '#5f2180',
     rules: [
       { label: 'Explicit Consent', text: 'Processing of digital personal data is strictly prohibited without the explicit, free, specific, and informed consent of the Data Principal.' },
       { label: 'PII Protection Standard', text: 'Personally Identifiable Information (PII) including Aadhaar numbers, PAN cards, biometrics, and financial credentials must be heavily masked or anonymized before bulk analysis.' },
@@ -70,7 +70,7 @@ const DEFAULT_COMPLIANCE_GUIDELINES = [
     icon: FileText,
     title: 'Fair Practices Code',
     subtitle: 'Ethical Lending Guidelines',
-    color: '#3b82f6',
+    color: '#da1e79',
     rules: [
       { label: 'Loan Document Acknowledgement', text: 'Banks are required to provide a written, dated acknowledgement for all submitted loan applications, accompanied by a clear timeline for the processing decision.' },
       { label: 'Interest Rate Transparency', text: 'The exact annualized rate of interest and the comprehensive total cost of credit must be explicitly documented and communicated to the borrower prior to sanctioning.' },
