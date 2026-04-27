@@ -167,8 +167,8 @@ export function useChat() {
     }
   }, [sessionId, tables, _finishUpload]);
 
-  // Send a question (with mode + webSearch)
-  const sendMessage = useCallback(async (question, mode = 'auto', webSearch = false) => {
+  // Send a question (with mode + webSearch + options)
+  const sendMessage = useCallback(async (question, mode = 'auto', webSearch = false, overrideOptions = {}) => {
     if (!sessionId || !question.trim()) return;
 
     const userMsg = {
@@ -183,7 +183,7 @@ export function useChat() {
     setError(null);
 
     try {
-      const data  = await api.askQuestion(sessionId, question, { sensitive_columns: sensitiveColumns }, mode, webSearch);
+      const data  = await api.askQuestion(sessionId, question, { sensitive_columns: sensitiveColumns, ...overrideOptions }, mode, webSearch);
       const aiMsg = {
         id: Date.now() + 1,
         role: 'assistant',
@@ -199,6 +199,7 @@ export function useChat() {
         agent_used: data.agent_used,
         web_context: data.web_context || [],
         compliance: data.compliance || null,
+        original_question: data.original_question || null,
         timestamp: data.timestamp || new Date().toISOString(),
       };
       setMessages(prev => [...prev, aiMsg]);

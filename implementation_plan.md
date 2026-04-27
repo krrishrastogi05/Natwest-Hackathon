@@ -577,15 +577,29 @@ cd frontend && npm run build
 10. Ask: **"What is the revenue?"** → uses semantic definition
 11. Click Export PDF → download report with all Q&A
 
+### Manual Verification
+1. Start the backend with the updated dependencies.
+2. Open the React frontend and open the Compliance Panel.
+3. Upload a sample policy PDF file containing a rule (e.g., "Do not export customer emails").
+4. Verify the panel shows a loading state and displays a new guideline card.
+5. Ask a question that violates the uploaded rule (e.g., "Show me customer emails").
+6. Verify that the RAG AI Compliance Check successfully flags the request as violating the newly added guideline.
+
 ---
 
 ## Open Questions
 
-> [!IMPORTANT]
-> 1. **Gemini API key** — Does each team member have one, or will you share a single key via `.env`?
-> 2. **TailwindCSS version** — The plan uses TailwindCSS 3 (CDN or npm). Confirm this is acceptable.
-> 3. **Scope cut priority** — If time runs short, what to drop first: PDF export, web search, or semantic layer editor?
-> 4. **Git hosting** — Is the repo already created on GitHub? What's the repo URL?
+None at this time.
+
+## Proposed Changes
+
+### AI RAG Compliance Check
+To support checking the user's query and data against the newly uploaded guidelines:
+1. Make `post_validate` in `backend/app/agents/compliance_agent.py` async.
+2. In `post_validate`, use the compliance knowledge base to retrieve the top policy chunks relevant to the user's question.
+3. Prompt Gemini with the question, a sample of the result data, and the retrieved policy chunks to determine if the query or data violates any guidelines.
+4. If a violation is detected, append an AI-generated warning/block annotation specifying the specific violated guideline and the reason.
+5. Update `orchestrator.py` to `await post_validate(...)`.
 
 ---
 

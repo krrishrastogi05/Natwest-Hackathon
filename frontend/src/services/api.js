@@ -111,6 +111,15 @@ export const api = {
     return response.data;
   },
 
+  uploadComplianceDocument: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await axios.post(`${API_BASE}/compliance/upload`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
   queryCompliance: async (question, sessionId = null) => {
     const response = await axios.post(`${API_BASE}/compliance/query`, {
       question,
