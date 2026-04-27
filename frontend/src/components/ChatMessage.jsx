@@ -178,6 +178,15 @@ export default function ChatMessage({ message, onSendMessage }) {
             <div className="card-section">
               <div className="card-section-body">
                 <ComplianceBadge compliance={message.compliance} />
+                {message.compliance.annotations?.[0]?.rule === 'ZERO_TRUST_GATEWAY' && message.original_question && (
+                  <button
+                    className="suggestion-chip"
+                    style={{ marginTop: 10, borderColor: 'var(--warning)', color: '#b45309' }}
+                    onClick={() => onSendMessage && onSendMessage(message.original_question, { ignore_security: true })}
+                  >
+                    Proceed Anyway (Ignore Security Warning)
+                  </button>
+                )}
               </div>
             </div>
           )}

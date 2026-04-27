@@ -69,8 +69,8 @@ export default function App() {
     }
   }, [chat, mode, webSearch]);
 
-  const handleSend = useCallback((text) => {
-    chat.sendMessage(text, mode, webSearch);
+  const handleSend = useCallback((text, customOptions = {}) => {
+    chat.sendMessage(text, mode, webSearch, customOptions);
   }, [chat, mode, webSearch]);
 
   const hasMessages = chat.messages.length > 0;

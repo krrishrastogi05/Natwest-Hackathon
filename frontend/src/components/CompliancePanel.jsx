@@ -1,7 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { Shield, ChevronDown, ChevronUp, BookOpen, AlertTriangle, Scale, FileText, Lock, CreditCard, Users, X, Upload, CheckCircle2 } from 'lucide-react';
 
-const COMPLIANCE_GUIDELINES = [
+import { api } from '../services/api';
+
+const DEFAULT_COMPLIANCE_GUIDELINES = [
   {
     id: 'irac',
     icon: Scale,
@@ -105,20 +107,37 @@ const COMPLIANCE_TIPS = [
 ];
 
 export default function CompliancePanel({ isActive, onClose, onAskQuestion }) {
+  const [guidelines, setGuidelines] = useState(DEFAULT_COMPLIANCE_GUIDELINES);
   const [expandedId, setExpandedId] = useState(null);
   const [tipIdx, setTipIdx] = useState(0);
   const [uploadedDocs, setUploadedDocs] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
 
   const nextTip = () => setTipIdx((i) => (i + 1) % COMPLIANCE_TIPS.length);
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files);
-    setUploadedDocs((prev) => [
-      ...prev,
-      ...files.map((f) => ({ name: f.name, size: f.size })),
-    ]);
-    e.target.value = '';
+    if (!files.length) return;
+    
+    setIsUploading(true);
+    try {
+      const file = files[0]; // Process one at a time for simplicity
+      const newGuideline = await api.uploadComplianceDocument(file);
+      
+      // Fallback icon
+      newGuideline.icon = FileText;
+      
+      setGuidelines(prev => [...prev, newGuideline]);
+      setUploadedDocs(prev => [...prev, { name: file.name }]);
+      setExpandedId(newGuideline.id);
+    } catch (error) {
+      console.error("Upload failed:", error);
+      alert("Failed to process compliance document.");
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
+    }
   };
 
   if (!isActive) return null;
@@ -145,7 +164,7 @@ export default function CompliancePanel({ isActive, onClose, onAskQuestion }) {
 
       {/* Guideline cards */}
       <div className="compliance-panel-body">
-        {COMPLIANCE_GUIDELINES.map((g) => {
+        {guidelines.map((g) => {
           const Icon = g.icon;
           const isExpanded = expandedId === g.id;
           return (
@@ -210,9 +229,9 @@ export default function CompliancePanel({ isActive, onClose, onAskQuestion }) {
             style={{ display: 'none' }}
             onChange={handleFileUpload}
           />
-          <button className="compliance-upload-btn" onClick={() => fileInputRef.current?.click()}>
-            <Upload size={11} />
-            Upload Document
+          <button className="compliance-upload-btn" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+            {isUploading ? <span className="loading-spinner"></span> : <Upload size={11} />}
+            {isUploading ? 'Extracting Rules...' : 'Upload Document'}
           </button>
           {uploadedDocs.length > 0 && (
             <div className="compliance-uploaded-list">

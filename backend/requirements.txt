@@ -16,3 +16,4 @@ scikit-learn==1.5.2
 Pillow==11.1.0
 pytest==8.3.4
 httpx==0.28.1
+pypdf==4.1.0

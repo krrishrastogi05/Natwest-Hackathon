@@ -19,9 +19,11 @@ Categories:
 - "visualization": Bar charts, line charts, pie charts, area charts of aggregated data. SQL + Recharts can render this.
 - "statistical_analysis": Anything requiring Python/matplotlib — correlations, heatmaps, distributions, histograms, box plots, scatter plots with regression, pairplots, outlier detection, clustering, statistical tests, pivot tables, any chart that needs seaborn or matplotlib.
 - "web_search": Questions about external news, trends, events, or industry context NOT in the data.
+- "compliance_question": Questions asking about company policies, rules, compliance guidelines, or what is allowed/prohibited.
 - "general": Greetings or meta-questions about the dataset or tool.
 
 IMPORTANT routing rules:
+- Questions about "policy", "guideline", "compliance", "rule", "allowed", "minimum spend", "violation" → ALWAYS "compliance_question"
 - "correlation", "heatmap", "correlation matrix", "correlation analysis" → ALWAYS "statistical_analysis"
 - "distribution", "histogram", "box plot", "violin plot" → ALWAYS "statistical_analysis"
 - "scatter plot", "regression", "trend line", "pairplot", "pair plot" → ALWAYS "statistical_analysis"
@@ -95,10 +97,13 @@ async def process_question(
             conversation_history = "\n".join(lines)
 
     # Step 0: Compliance pre-screen (runs regardless of mode)
+    ignore_security = options.get("ignore_security", False)
     from app.agents.compliance_agent import pre_screen, post_validate, answer_compliance_question
-    block = pre_screen(question)
-    if block:
-        return block
+    if not ignore_security:
+        block = await pre_screen(question)
+        if block:
+            block["original_question"] = question
+            return block
 
     # Compliance mode: route entirely to compliance agent
     if mode == "compliance":
@@ -132,6 +137,9 @@ async def process_question(
     ]
     if mode == "auto" and any(kw in q_lower for kw in STATISTICAL_KEYWORDS):
         category = "statistical_analysis"
+
+    if category == "compliance_question":
+        return await answer_compliance_question(question, schema)
 
     # Step 2: Route to primary agent + optionally parallel web search
     primary_coro = _run_primary_agent(question, session, category, include_chart, total_rows)
@@ -202,7 +210,7 @@ async def process_question(
     suggestions = [] if result.get("error") else await _suggest_followups(question, answer, schema)
 
     # Step 5: Compliance post-validate
-    compliance_result = post_validate(question, result.get("data", []), schema)
+    compliance_result = await post_validate(question, result.get("data", []), schema)
 
     # Step 6: Confidence
     confidence = calculate_confidence(

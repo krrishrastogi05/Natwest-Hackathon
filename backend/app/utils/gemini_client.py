@@ -138,7 +138,7 @@ class GeminiClient:
 
         # 1st attempt: direct parse
         try:
-            return json.loads(response)
+            return json.loads(response, strict=False)
         except json.JSONDecodeError:
             pass
 
@@ -146,7 +146,7 @@ class GeminiClient:
         json_match = re.search(r"\{.*\}", response, re.DOTALL)
         if json_match:
             try:
-                return json.loads(json_match.group())
+                return json.loads(json_match.group(), strict=False)
             except json.JSONDecodeError:
                 pass
 
