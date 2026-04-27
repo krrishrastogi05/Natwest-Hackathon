@@ -207,10 +207,10 @@ export default function Sidebar({
           )}
 
           {/* Privacy notice */}
-          <div style={{ borderRadius: 8, border: '1px solid rgba(74,222,128,0.12)', background: 'rgba(74,222,128,0.04)', padding: '9px 11px', marginTop: 'auto' }}>
+          <div style={{ borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)', padding: '9px 11px', marginTop: 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-              <Lock size={11} style={{ color: '#4ade80' }} />
-              <span style={{ fontSize: 10, fontWeight: 600, color: '#4ade80' }}>Privacy secured</span>
+              <Lock size={11} style={{ color: 'var(--sidebar-accent)' }} />
+              <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--sidebar-accent)' }}>Privacy secured</span>
             </div>
             <p style={{ fontSize: 9, color: 'var(--sidebar-muted)', lineHeight: 1.5 }}>Your data never leaves this server. All processing is local.</p>
           </div>

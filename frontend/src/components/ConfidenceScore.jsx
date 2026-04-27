@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
 function getScoreColor(score) {
-  if (score >= 75) return '#10b981'; // green
-  if (score >= 50) return '#f59e0b'; // amber
-  return '#ef4444'; // red
+  if (score >= 75) return '#007a4d'; // NatWest green
+  if (score >= 50) return '#b45309'; // NatWest amber
+  return '#c0392b'; // NatWest red
 }
 
 function getScoreLabel(score) {
@@ -43,11 +43,11 @@ export default function ConfidenceScore({ confidence }) {
   ].filter(b => b.value !== null && b.value !== undefined);
 
   return (
-    <div className="my-3 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111827]/60 overflow-hidden animate-fade-in-up">
+    <div className="my-3 rounded-xl border border-[rgba(95,33,128,0.18)] bg-[#1e0f30]/60 overflow-hidden animate-fade-in-up">
       {/* Main row */}
       <button
         onClick={() => breakdowns.length > 0 && setExpanded(!expanded)}
-        className="w-full flex items-center gap-4 px-4 py-3 hover:bg-[rgba(255,255,255,0.02)] transition-colors"
+        className="w-full flex items-center gap-4 px-4 py-3 hover:bg-[rgba(95,33,128,0.06)] transition-colors"
       >
         {/* SVG Ring */}
         <div className="flex-shrink-0">
@@ -101,12 +101,12 @@ export default function ConfidenceScore({ confidence }) {
               {label}
             </span>
           </div>
-          <p className="text-[11px] text-[#94a3b8] mt-0.5">Confidence Score</p>
+          <p className="text-[11px] text-[#8b6fa8] mt-0.5">Confidence Score</p>
         </div>
 
         {/* Expand toggle */}
         {breakdowns.length > 0 && (
-          <div className="text-[#64748b]">
+          <div className="text-[#7c5fa0]">
             {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </div>
         )}
@@ -114,19 +114,19 @@ export default function ConfidenceScore({ confidence }) {
 
       {/* Breakdown section */}
       {expanded && breakdowns.length > 0 && (
-        <div className="px-4 pb-4 pt-1 border-t border-[rgba(255,255,255,0.05)] space-y-2.5">
+        <div className="px-4 pb-4 pt-1 border-t border-[rgba(95,33,128,0.15)] space-y-2.5">
           {breakdowns.map((item, i) => {
             const itemColor = getScoreColor(item.value);
             return (
               <div key={i}>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] text-[#94a3b8]">{item.label}</span>
+                  <span className="text-[11px] text-[#8b6fa8]">{item.label}</span>
                   <span className="text-[11px] font-semibold" style={{ color: itemColor }}>
                     {item.value}%
                   </span>
                 </div>
                 {/* Mini progress bar */}
-                <div className="h-1.5 rounded-full bg-[rgba(255,255,255,0.06)] overflow-hidden">
+                <div className="h-1.5 rounded-full bg-[rgba(95,33,128,0.1)] overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all duration-700 ease-out"
                     style={{

@@ -243,19 +243,19 @@ const COMMODITIES = [
 ];
 
 const SEVERITY_COLOR = {
-  critical: '#ef4444',
-  warning:  '#f59e0b',
-  info:     '#22c55e',
+  critical: '#c0392b',
+  warning:  '#b45309',
+  info:     '#007a4d',
 };
 
 const CATEGORY_COLOR = {
-  Markets:      '#3b82f6',
-  Commodities:  '#f59e0b',
-  'Central Bank': '#a855f7',
-  FX:           '#06b6d4',
-  Banking:      '#ec4899',
-  Crypto:       '#8b5cf6',
-  Trade:        '#22c55e',
+  Markets:      '#5f2180',
+  Commodities:  '#b45309',
+  'Central Bank': '#42145f',
+  FX:           '#0891b2',
+  Banking:      '#da1e79',
+  Crypto:       '#7c2d9e',
+  Trade:        '#007a4d',
 };
 
 export default function FinancialGlobe({ isOpen, onClose }) {
@@ -428,21 +428,21 @@ export default function FinancialGlobe({ isOpen, onClose }) {
                 pointResolution={12}
                 pointLabel={d => `
                   <div style="
-                    background: #0d0d0d;
+                    background: #1e0f30;
                     border: 1px solid ${SEVERITY_COLOR[d.severity]};
-                    border-radius: 8px;
+                    border-radius: 10px;
                     padding: 10px 14px;
-                    font-family: 'JetBrains Mono', monospace;
+                    font-family: 'DM Sans', sans-serif;
                     max-width: 260px;
-                    color: #e5e7eb;
-                    box-shadow: 0 4px 24px rgba(0,0,0,0.8);
+                    color: #f0e9ff;
+                    box-shadow: 0 4px 24px rgba(66,20,95,0.7);
                   ">
                     <div style="color:${SEVERITY_COLOR[d.severity]};font-size:10px;font-weight:700;letter-spacing:0.1em;margin-bottom:4px;">
                       ${d.category.toUpperCase()} · ${d.severity.toUpperCase()}
                     </div>
                     <div style="font-size:13px;font-weight:600;margin-bottom:6px;line-height:1.4;">${d.headline}</div>
-                    <div style="font-size:11px;color:#9ca3af;line-height:1.5;">${d.description}</div>
-                    <div style="font-size:10px;color:#6b7280;margin-top:6px;">📍 ${d.location}</div>
+                    <div style="font-size:11px;color:#c4a8e0;line-height:1.5;">${d.description}</div>
+                    <div style="font-size:10px;color:#7c5fa0;margin-top:6px;">📍 ${d.location}</div>
                   </div>
                 `}
                 onPointClick={d => {

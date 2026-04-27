@@ -71,7 +71,7 @@ export default function ModelLab({ isOpen, onClose, sessionId, schema = [], onDi
         {/* Header */}
         <div className="model-lab-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Shield size={18} style={{ color: '#22c55e' }} />
+            <Shield size={18} style={{ color: 'var(--success)' }} />
             <span className="model-lab-title">Secure Model Lab</span>
             <span className="model-lab-secure-badge">
               <Lock size={9} /> Private
@@ -136,8 +136,8 @@ export default function ModelLab({ isOpen, onClose, sessionId, schema = [], onDi
                   onClick={() => { setSelectedUseCase('__custom__'); setSelectedModels([]); setColumnMapping({}); }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                    <Lock size={13} style={{ color: '#22c55e' }} />
-                    <div className="use-case-card-title" style={{ color: '#22c55e' }}>Bring Your Own Pipeline</div>
+                    <Lock size={13} style={{ color: 'var(--success)' }} />
+                    <div className="use-case-card-title" style={{ color: 'var(--success)' }}>Bring Your Own Pipeline</div>
                   </div>
                   <div className="use-case-card-desc">
                     Upload your proprietary model pipeline and input schema. Inference stays entirely within your infrastructure — zero data exposure.
@@ -154,7 +154,7 @@ export default function ModelLab({ isOpen, onClose, sessionId, schema = [], onDi
               {isCustom && (
                 <div className="byo-upload-panel">
                   <div className="byo-upload-title">
-                    <Lock size={12} style={{ color: '#22c55e' }} />
+                    <Lock size={12} style={{ color: 'var(--success)' }} />
                     Private Pipeline Configuration
                   </div>
                   <p className="byo-upload-desc">
@@ -218,9 +218,9 @@ export default function ModelLab({ isOpen, onClose, sessionId, schema = [], onDi
           {step === 1 && isCustom && (
             <div>
               <div className="byo-registered-banner">
-                <Check size={14} style={{ color: '#22c55e', flexShrink: 0 }} />
+                <Check size={14} style={{ color: 'var(--success)', flexShrink: 0 }} />
                 <div>
-                  <div style={{ fontWeight: 600, color: '#22c55e', fontSize: 13 }}>Pipeline registered</div>
+                  <div style={{ fontWeight: 600, color: 'var(--success)', fontSize: 13 }}>Pipeline registered</div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
                     {customModelFile?.name}{customSchemaFile ? ` · ${customSchemaFile.name}` : ''}
                   </div>
@@ -332,9 +332,9 @@ export default function ModelLab({ isOpen, onClose, sessionId, schema = [], onDi
           {step === 2 && result?.__custom && (
             <div>
               <div className="byo-registered-banner" style={{ marginBottom: 16 }}>
-                <Shield size={14} style={{ color: '#22c55e', flexShrink: 0 }} />
+                <Shield size={14} style={{ color: 'var(--success)', flexShrink: 0 }} />
                 <div>
-                  <div style={{ fontWeight: 600, color: '#22c55e', fontSize: 13 }}>Pipeline executed securely</div>
+                  <div style={{ fontWeight: 600, color: 'var(--success)', fontSize: 13 }}>Pipeline executed securely</div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
                     All inference ran locally · No data transmitted externally
                   </div>

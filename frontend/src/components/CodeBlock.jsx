@@ -21,10 +21,10 @@ const languageLabels = {
 };
 
 const languageColors = {
-  sql: '#3b82f6',
-  python: '#f59e0b',
-  javascript: '#10b981',
-  js: '#10b981',
+  sql: '#5f2180',
+  python: '#b45309',
+  javascript: '#007a4d',
+  js: '#007a4d',
 };
 
 // Custom dark theme matching our NatWest-inspired palette
@@ -32,7 +32,7 @@ const customTheme = {
   ...oneDark,
   'pre[class*="language-"]': {
     ...oneDark['pre[class*="language-"]'],
-    background: '#0f0f1e',
+    background: '#12071e',
     margin: 0,
     padding: '12px 14px',
     fontSize: '12px',
@@ -56,7 +56,7 @@ export default function CodeBlock({ code, language, title }) {
 
   const lang = detectLanguage(code, language);
   const langLabel = languageLabels[lang] || lang.toUpperCase();
-  const langColor = languageColors[lang] || '#8b5cf6';
+  const langColor = languageColors[lang] || '#7c2d9e';
   const lines = code.trim().split('\n');
   const isLong = lines.length > 3;
   const displayCode = collapsed && isLong ? lines.slice(0, 3).join('\n') : code.trim();
@@ -81,16 +81,16 @@ export default function CodeBlock({ code, language, title }) {
   };
 
   return (
-    <div className="my-3 rounded-xl overflow-hidden border border-[rgba(255,255,255,0.08)] bg-[#111827]/60 animate-fade-in-up">
+    <div className="my-3 rounded-xl overflow-hidden border border-[rgba(95,33,128,0.18)] bg-[#1e0f30]/60 animate-fade-in-up">
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-2 bg-[rgba(255,255,255,0.02)] border-b border-[rgba(255,255,255,0.06)]">
+      <div className="flex items-center gap-2 px-3 py-2 bg-[rgba(95,33,128,0.06)] border-b border-[rgba(95,33,128,0.12)]">
         <Code2 size={13} style={{ color: langColor }} />
         <span className="text-[11px] font-semibold" style={{ color: langColor }}>
           {title || langLabel}
         </span>
 
         {/* Line count */}
-        <span className="text-[10px] text-[#64748b] ml-1">
+        <span className="text-[10px] text-[#7c5fa0] ml-1">
           {lines.length} line{lines.length !== 1 ? 's' : ''}
         </span>
 
@@ -98,8 +98,8 @@ export default function CodeBlock({ code, language, title }) {
           {/* Copy button */}
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-all duration-200 hover:bg-[rgba(255,255,255,0.06)]"
-            style={{ color: copied ? '#10b981' : '#64748b' }}
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-all duration-200 hover:bg-[rgba(95,33,128,0.12)]"
+            style={{ color: copied ? '#007a4d' : '#7c5fa0' }}
             title="Copy code"
           >
             {copied ? <Check size={11} /> : <Copy size={11} />}
@@ -110,7 +110,7 @@ export default function CodeBlock({ code, language, title }) {
           {isLong && (
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium text-[#64748b] hover:bg-[rgba(255,255,255,0.06)] transition-all duration-200"
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium text-[#7c5fa0] hover:bg-[rgba(95,33,128,0.12)] transition-all duration-200"
             >
               {collapsed ? (
                 <><ChevronDown size={11} /> Expand</>
@@ -128,7 +128,7 @@ export default function CodeBlock({ code, language, title }) {
           language={lang}
           style={customTheme}
           showLineNumbers={!collapsed || !isLong}
-          lineNumberStyle={{ color: '#3a3a5a', fontSize: '10px', paddingRight: '12px', minWidth: '2em' }}
+          lineNumberStyle={{ color: '#3e2060', fontSize: '10px', paddingRight: '12px', minWidth: '2em' }}
           wrapLines
         >
           {displayCode}
@@ -136,7 +136,7 @@ export default function CodeBlock({ code, language, title }) {
 
         {/* Fade-out gradient when collapsed */}
         {collapsed && isLong && (
-          <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-[#0f0f1e] to-transparent pointer-events-none" />
+          <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-[#12071e] to-transparent pointer-events-none" />
         )}
       </div>
     </div>

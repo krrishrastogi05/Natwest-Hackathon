@@ -1,28 +1,30 @@
 import React, { useState } from 'react';
-import { ArrowRight, Shield, FlaskConical, CheckCircle2, BarChart2, FileText, Globe, Lock } from 'lucide-react';
+import { ArrowRight, Shield, FlaskConical, CheckCircle2 } from 'lucide-react';
 
 const HIGHLIGHT_CARDS = [
   {
     icon: Shield,
-    accent: '#00D4A1',
+    accent: '#007a4d',
     label: 'Security First',
     headline: 'Zero-trust by default',
     body: 'End-to-end data masking, sensitive column detection, audit trails, and real-time compliance guardrails on every query.',
-    glow: true,
+    glow: false,
   },
   {
     icon: FlaskConical,
-    accent: '#7B3FE4',
+    accent: '#a855f7',
     label: 'Python ML Engine',
     headline: 'Full analytics power',
     body: 'Sandboxed Python environment with pandas, scikit-learn & matplotlib. Run regressions, clustering, forecasts — no code needed.',
+    glow: false,
   },
   {
     icon: CheckCircle2,
-    accent: '#3b82f6',
+    accent: '#da1e79',
     label: 'Compliance Ready',
     headline: 'Regulatory out of the box',
     body: 'PMLA / AML, KYC / CDD, DPDP Act 2023, IRAC Norms — every response is validated against live compliance rules.',
+    glow: true,
   },
 ];
 
@@ -41,7 +43,7 @@ export default function SplashScreen({ onComplete }) {
 
     .lp-root {
       position: fixed; inset: 0; z-index: 100;
-      background: #000;
+      background: linear-gradient(160deg, #42145f 0%, #12071e 60%, #1a0530 100%);
       font-family: 'Inter', sans-serif;
       overflow-y: auto;
       transition: opacity 0.5s ease;
@@ -57,12 +59,12 @@ export default function SplashScreen({ onComplete }) {
     }
     .lp-blob-1 {
       width: 800px; height: 800px;
-      background: radial-gradient(circle, rgba(123,63,228,0.13) 0%, transparent 65%);
+      background: radial-gradient(circle, rgba(218,30,121,0.18) 0%, transparent 65%);
       top: -300px; left: -200px;
     }
     .lp-blob-2 {
       width: 600px; height: 600px;
-      background: radial-gradient(circle, rgba(0,212,161,0.09) 0%, transparent 65%);
+      background: radial-gradient(circle, rgba(95,33,128,0.22) 0%, transparent 65%);
       bottom: -200px; right: -100px;
     }
 
@@ -97,18 +99,18 @@ export default function SplashScreen({ onComplete }) {
       gap: 8px;
       padding: 6px 16px;
       border-radius: 99px;
-      border: 1px solid rgba(123,63,228,0.5);
-      background: rgba(123,63,228,0.1);
+      border: 1px solid rgba(218,30,121,0.5);
+      background: rgba(218,30,121,0.12);
       font-family: 'Inter', sans-serif;
       font-size: 12px;
       font-weight: 600;
-      color: #c4a8ff;
+      color: #f9a8d4;
       letter-spacing: 0.03em;
     }
     .lp-dot {
       width: 6px; height: 6px;
       border-radius: 50%;
-      background: #00D4A1;
+      background: #da1e79;
       animation: lp-blink 2s ease-in-out infinite;
     }
     @keyframes lp-blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
@@ -140,7 +142,7 @@ export default function SplashScreen({ onComplete }) {
       margin: 0;
     }
     .lp-h1 .g {
-      background: linear-gradient(135deg, #a78bfa 0%, #00D4A1 100%);
+      background: linear-gradient(135deg, #da1e79 0%, #a855f7 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -172,24 +174,24 @@ export default function SplashScreen({ onComplete }) {
     .lp-card {
       border-radius: 16px;
       border: 1px solid rgba(255,255,255,0.07);
-      background: rgba(255,255,255,0.03);
+      background: rgba(255,255,255,0.04);
       padding: 20px 20px 22px;
       text-align: left;
       transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
       cursor: default;
     }
     .lp-card:hover {
-      background: rgba(255,255,255,0.055);
+      background: rgba(255,255,255,0.07);
       border-color: rgba(255,255,255,0.14);
     }
     .lp-card.glow {
-      border-color: rgba(0,212,161,0.3);
-      background: rgba(0,212,161,0.04);
-      box-shadow: 0 0 40px rgba(0,212,161,0.08);
+      border-color: rgba(218,30,121,0.35);
+      background: rgba(218,30,121,0.06);
+      box-shadow: 0 0 40px rgba(218,30,121,0.1);
     }
     .lp-card.glow:hover {
-      border-color: rgba(0,212,161,0.5);
-      box-shadow: 0 0 60px rgba(0,212,161,0.13);
+      border-color: rgba(218,30,121,0.55);
+      box-shadow: 0 0 60px rgba(218,30,121,0.16);
     }
     .lp-card-top {
       display: flex;
@@ -259,28 +261,29 @@ export default function SplashScreen({ onComplete }) {
       position: relative; overflow: hidden;
       display: inline-flex; align-items: center; gap: 10px;
       padding: 15px 44px;
-      border-radius: 14px;
-      background: #fff;
-      color: #000;
+      border-radius: 9999px;
+      background: #5f2180;
+      color: #fff;
       font-family: 'Space Grotesk', sans-serif;
       font-size: 16px;
       font-weight: 700;
       border: none;
       cursor: pointer;
       letter-spacing: -0.01em;
-      transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.28s;
-      box-shadow: 0 0 0 1px rgba(255,255,255,0.2), 0 8px 32px rgba(255,255,255,0.07);
+      transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.28s, background 0.2s;
+      box-shadow: 0 0 0 1px rgba(218,30,121,0.4), 0 8px 32px rgba(95,33,128,0.35);
     }
     .lp-cta:hover {
+      background: #42145f;
       transform: translateY(-3px) scale(1.03);
-      box-shadow: 0 0 0 1px rgba(255,255,255,0.35), 0 16px 48px rgba(255,255,255,0.13);
+      box-shadow: 0 0 0 1px rgba(218,30,121,0.6), 0 16px 48px rgba(95,33,128,0.5);
     }
     .lp-cta .arr { transition: transform 0.2s; }
     .lp-cta:hover .arr { transform: translateX(4px); }
     .lp-cta::after {
       content: '';
       position: absolute; inset: 0;
-      background: linear-gradient(90deg, transparent, rgba(0,0,0,0.04), transparent);
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
       transform: translateX(-100%);
       animation: lp-sh 3s infinite;
     }
@@ -317,7 +320,7 @@ export default function SplashScreen({ onComplete }) {
           <div className="lp-top a" style={{ animationDelay: '0s' }}>
             <div className="lp-badge">
               <span className="lp-dot" />
-              NatWest Code for Purpose · 2026
+              Code for Purpose · 2026
             </div>
             <span className="lp-team">Team: Swords of Summer</span>
           </div>
