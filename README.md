@@ -1,29 +1,34 @@
-# Multi Agent Conversational AI that Keeps your data safe and secure
+# DataTalk — NatWest Code for Purpose Hackathon 2026
 
-**NatWest Code for Purpose Hackathon 2026 | Talk to Data**
+**Multi-Agent Conversational AI for Financial Data Analysis | Talk to Data**
 
-The system enables any user to ask questions about their data in plain English and receive clear, verifiable answers in seconds. No SQL, no dashboards, no data team required. Upload a dataset, ask a question, and get an answer backed by a source reference, a confidence score, and a chart where applicable.
+DataTalk enables any user to ask questions about their data in plain English and receive clear, verifiable answers in seconds — with regulatory compliance built into every step. No SQL, no dashboards, no data team required. Upload a dataset, ask a question, and get an answer backed by a source reference, a confidence score, a chart where applicable, and automatic validation against RBI, PMLA, and DPDP Act regulations.
 
-The system is built on three pillars from the NatWest problem statement: **Clarity** (answers non-experts can act on immediately), **Trust** (every response cites its data source and carries a reliability rating), and **Speed** (a multi-agent pipeline routes each question to the right tool automatically, with no manual steps required).
+The system is built on three pillars from the NatWest problem statement: **Clarity** (answers non-experts can act on immediately), **Trust** (every response cites its data source, carries a reliability rating, and has passed a compliance gateway), and **Speed** (a multi-agent pipeline routes each question to the right tool automatically, with no manual steps required).
 
 ---
 
 ## System Architecture
 
 ### High-Level Design (HLD)
+
 ```mermaid
 graph LR
-    U([ User]) --> FE["React\nFrontend"]
+    U([ User]) -->|Password auth| AG["AuthGate\nComponent"]
+    AG --> FE["React\nFrontend\nNatWest UI"]
     FE -->|REST API| BE["FastAPI\nBackend"]
     BE --> PP["Preprocessing\nWizard"]
     PP --> O[" Orchestrator\nAgent"]
 
-    O --> SA["SQL Agent"]
-    O --> CA["Code Agent"]
-    O --> WA["Search Agent"]
-    O --> EA["Explain Agent"]
+    O -->|Pre-screen| CMP["Compliance\nAgent"]
+    CMP -->|RAG lookup| KB[("Compliance KB\nTF-IDF · 8 docs")]
+    CMP -->|Cleared| SA["SQL Agent"]
+    CMP -->|Cleared| CA["Code Agent"]
+    CMP -->|Cleared| WA["Search Agent"]
+    CMP -->|Cleared| EA["Explain Agent"]
+    O --> CMP2["Post-validate\nRule Engine"]
 
-    SA & CA -->|"Schema Only\n No Raw Data"| LLM[" Any LLM\nAPI"]
+    SA & CA -->|"Schema Only\nNo Raw Data"| LLM[" Any LLM\nAPI"]
 
     SA -->|DuckDB SQL| DB[("DuckDB\nSession")]
     CA --> SB["Python\nSandbox"]
@@ -37,20 +42,29 @@ graph LR
     style FS fill:#581c87,color:#fff,stroke:#a855f7
     style O fill:#1e293b,color:#fff,stroke:#64748b
     style PP fill:#065f46,color:#fff,stroke:#10b981
+    style CMP fill:#7f1d1d,color:#fff,stroke:#ef4444
+    style CMP2 fill:#7f1d1d,color:#fff,stroke:#ef4444
+    style KB fill:#713f12,color:#fff,stroke:#f59e0b
+    style AG fill:#42145f,color:#fff,stroke:#da1e79
 ```
 
-### Request Flow (LLD - Sequence Diagram)
+### Request Flow (LLD — Sequence Diagram)
 
 ```mermaid
 sequenceDiagram
     actor U as User
+    participant AG as AuthGate
     participant F as Frontend
     participant B as FastAPI
+    participant C as Compliance Agent
     participant W as Preprocessing Wizard
     participant O as Orchestrator
     participant A as Agent
     participant L as LLM API
     participant D as Analytical DB
+
+    U->>AG: Enter password
+    AG-->>U: Access granted (or rejected)
 
     U->>F: Upload CSV / Excel / JSON / TSV
     F->>B: POST /api/upload
@@ -69,34 +83,45 @@ sequenceDiagram
 
     U->>F: Ask question in plain English
     F->>B: POST /api/chat
-    B->>O: Route question
-    O->>L: Intent detection (schema only, no data values)
-    L-->>O: Agent type selected
+    B->>C: pre_screen() — PII / compliance gate
+    Note over C: Zero-trust LLM prompt<br/>Rejects PII queries with DPDP Act citation
+    alt Query blocked
+        C-->>B: Rejection + policy citation
+        B-->>F: Compliance violation response
+    else Query cleared
+        C-->>B: Cleared
+        B->>O: Route question
+        O->>L: Intent detection (schema only, no data values)
+        L-->>O: Agent type selected
 
-    alt SQL Query or Visualisation
-        O->>A: SQL Agent activated
-        A->>L: Schema + question, returns SQL
-        A->>D: Execute parameterised query
-        D-->>A: Result set
-    else Statistical Analysis
-        O->>A: Code Agent activated
-        A->>L: Schema + question, returns Python code
-        Note over A: Sandbox: whitelisted libs only<br/>No file I/O · No network · 30 s hard limit
-        A->>D: Read local DataFrame
-        D-->>A: Data for local computation
+        alt SQL Query or Visualisation
+            O->>A: SQL Agent activated
+            A->>L: Schema + question, returns SQL
+            A->>D: Execute parameterised query
+            D-->>A: Result set
+        else Statistical Analysis
+            O->>A: Code Agent activated
+            A->>L: Schema + question, returns Python code
+            Note over A: Sandbox: whitelisted libs only<br/>No file I/O · No network · 30 s hard limit
+            A->>D: Read local DataFrame
+            D-->>A: Data for local computation
+        end
+
+        A->>L: Summarise result in plain English
+        L-->>A: Business-friendly explanation
+        A->>C: post_validate() — deterministic rule engine
+        Note over C: Checks result data against<br/>NPA, PSL, PMLA, PII rules — no LLM
+        C-->>A: Compliance findings appended
+        A-->>B: Answer + chart + confidence score + sources + compliance findings
+        B-->>F: Structured response
+        F-->>U: Answer, visualisation, source reference, and compliance panel
     end
-
-    A->>L: Summarise result in plain English
-    L-->>A: Business-friendly explanation
-    A-->>B: Answer + chart + confidence score + sources
-    B-->>F: Structured response
-    F-->>U: Answer, visualisation, and source reference
 ```
 
 ---
 
 https://drive.google.com/drive/folders/1fwXGXJT4ZchnP0q2d6ku4rwp8tnJidzc
-(You can use this dataset for testing, this is synthetically constructed dataset)
+(Synthetically constructed dataset for testing)
 
 ## Demo Video
 
@@ -104,7 +129,132 @@ https://github.com/user-attachments/assets/936c42e9-4a5b-4fc3-8b03-3b8ef8cbb8db
 
 ---
 
-## Multi-Table Analysis (New)
+## Authentication & Access Control
+
+The entire application is gated behind a password-authenticated entry point (`AuthGate`), implemented in `frontend/src/components/AuthGate.jsx`. No data, no queries, and no analysis tools are accessible until the user authenticates successfully.
+
+This control is a deliberate architectural decision for a financial data analysis tool: even a demonstration deployment should not expose sensitive banking datasets or query capabilities to unauthenticated visitors.
+
+- Authentication is enforced at the React root — the app renders nothing until the gate is passed.
+- Invalid credentials trigger a shake animation and are rejected without revealing any application state.
+- The gate is styled in the NatWest brand palette (deep purple background, magenta unlock button) to signal an enterprise-grade access boundary.
+
+---
+
+## Regulatory Compliance Engine
+
+DataTalk treats regulatory compliance as a first-class architectural concern, not an afterthought. Every query passes through two compliance checkpoints automatically. Users can also interrogate the embedded compliance knowledge base directly.
+
+### Three-Mode Compliance Agent
+
+The `ComplianceAgent` (`backend/app/agents/compliance_agent.py`) operates in three modes, invoked at different points in the request lifecycle:
+
+| Mode | When it runs | What it does |
+|---|---|---|
+| `pre_screen()` | Every chat query, before the orchestrator routes it | Zero-trust LLM gateway. Rejects queries that request personally identifiable information, citing the applicable regulation (DPDP Act 2023). Cleared queries proceed to the orchestrator unchanged. |
+| `post_validate()` | Every result, before the response is returned | Deterministic rule engine — no LLM involved. Validates result data against four RBI and PMLA rules and appends structured compliance findings to the response. |
+| `answer_compliance_question()` | `POST /api/compliance/query` | RAG-based policy Q&A. Retrieves relevant chunks from the embedded knowledge base using TF-IDF similarity and returns a cited policy answer. |
+
+### Deterministic Rule Engine
+
+`compliance_rules.py` contains four hardcoded, LLM-free compliance rules. These rules cannot be circumvented by query phrasing because they operate on the result data after the query has already executed.
+
+**PII_EXPOSURE**
+Blocks queries and results that expose personally identifiable information: Aadhaar numbers, PAN, SSN, CVV, passport numbers, biometric data. Grounded in the Digital Personal Data Protection Act 2023 (DPDP). Triggered at both the pre-screen and post-validate stages.
+
+**NPA_CLASSIFICATION**
+Validates NPA (Non-Performing Asset) classification against RBI IRAC norms. Flags any loan account with 61–90 Days Past Due (DPD) that is marked as "Standard" in the dataset — the correct classification under IRAC is SMA-2. Returns the count of misclassified accounts and the applicable RBI circular.
+
+**PSL_RATIO**
+Checks the Priority Sector Lending (PSL) ratio of a loan portfolio against the RBI-mandated 40% threshold. Calculates the shortfall in Crore if the portfolio falls below the target and names the relevant RBI Master Directions.
+
+**PMLA_CTR_THRESHOLD**
+Flags individual cash transactions at or above ₹10 lakh that have not been marked for Cash Transaction Report (CTR) filing, as required under the Prevention of Money Laundering Act 2002 (PMLA). Returns the count and aggregate value of unfiled transactions.
+
+### Compliance Knowledge Base
+
+`compliance_kb.py` implements a TF-IDF vectoriser over eight embedded markdown policy documents, loaded at application startup. There is no external vector database dependency.
+
+**Embedded documents:**
+- RBI Fair Practices Code
+- RBI IRAC Norms (NPA classification)
+- RBI Priority Sector Lending Guidelines
+- PMLA Cash Transaction Thresholds
+- DPDP Act 2023 Basics (data privacy)
+- Internal Lending Policy
+- User-uploaded custom documents (persisted across sessions)
+
+**Live document ingestion:** Upload any PDF compliance document via `POST /api/compliance/upload`. The backend extracts its text content, converts it to a markdown chunk, saves it to `backend/app/compliance_docs/`, and reloads the TF-IDF index live — no application restart required.
+
+### Compliance API Endpoints
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/compliance/documents` | Lists all loaded compliance documents and total chunk count |
+| `POST /api/compliance/query` | Direct compliance policy Q&A (does not touch any uploaded dataset) |
+| `POST /api/compliance/upload` | Upload a PDF → AI text extraction → knowledge base reload |
+
+### Compliance in the UI
+
+The `CompliancePanel` component surfaces compliance findings directly in the chat interface. Every response that triggers a rule violation shows the rule name, the applicable regulation, the specific finding (e.g., count of misclassified accounts), and a recommended action — inline, without requiring a separate compliance workflow.
+
+---
+
+## Security by Design
+
+DataTalk treats data privacy as a hard architectural constraint, not a configuration option. The LLM has no access to your actual data at any stage. Security is enforced through six independent layers, each operating without relying on any other:
+
+**Layer 1: Schema-only LLM prompting**
+Agents send the LLM only column names and data types. The LLM returns SQL or Python targeting that schema. Query execution happens entirely on the local server. The LLM never receives a single data value.
+
+**Layer 2: Python sandbox with hard boundaries**
+Statistical analysis requires code execution, which carries inherent risk in most systems. Every piece of LLM-generated Python runs inside a restricted interpreter with a fixed import whitelist: `pandas`, `numpy`, `matplotlib`, `seaborn`, `scipy`, `sklearn`. The `open()` builtin is removed. OS, socket, and subprocess modules are inaccessible at the interpreter level. A 30-second thread-based timeout terminates any runaway or malicious execution. No data can leave the machine through generated code.
+
+**Layer 3: Session isolation**
+Every file upload is assigned a UUID. Each session maintains its own database file, its own in-memory cache, and its own connection object. No session can read, query, or infer data from another session.
+
+**Layer 4: Sensitive column masking**
+Users can flag individual columns as sensitive before querying. When a flagged column appears in a result, the Explain Agent is bypassed entirely. No LLM processes values from those columns, even indirectly.
+
+**Layer 5: Input validation and query safety**
+Accepted file extensions: `.csv`, `.xlsx`, `.xls`, `.json`, `.tsv`. Maximum upload size: 50 MB. Column names are normalised on ingest. All database queries use identifier quoting and parameterisation to prevent injection.
+
+**Layer 6: Regulatory Compliance Gateway**
+Every query passes through a two-checkpoint compliance gateway before a response is returned. At ingress, a zero-trust LLM prompt rejects queries that request personally identifiable information, citing the relevant regulation. At egress, a deterministic rule engine (no LLM involved) validates the result data against four RBI and PMLA rules. Neither checkpoint can be bypassed by query phrasing.
+
+```
+Data boundary, enforced at every step:
+
+  Authenticated user (AuthGate)
+        |
+        v
+  Preprocessing Wizard (local, in-memory only)
+        |
+        v
+  Compliance pre-screen (PII gateway — query rejected here if flagged)
+        |
+        v
+  Analytical DB (local server, cleaned data)
+        |
+        v
+  Schema extracted (names + types only)
+        |
+        v
+  Sent to LLM
+        |          Raw data stops here, always
+        v
+  Result returned
+        |
+        v
+  Compliance post-validate (deterministic rule engine — no LLM)
+        |
+        v
+  Response with compliance findings
+```
+
+---
+
+## Multi-Table Analysis
 
 Upload multiple datasets into a single session and ask questions that span them.
 
@@ -188,47 +338,6 @@ All data transformations, both zero-risk auto-fixes and user-approved decisions,
 
 ---
 
-## Security by Design
-
-DataTalk treats data privacy as a hard architectural constraint, not a configuration option. The LLM has no access to your actual data at any stage. Security is enforced through five independent layers, each operating without relying on any other:
-
-**Layer 1: Schema-only LLM prompting**
-Agents send the LLM only column names and data types. The LLM returns SQL or Python targeting that schema. Query execution happens entirely on the local server. The LLM never receives a single data value.
-
-**Layer 2: Python sandbox with hard boundaries**
-Statistical analysis requires code execution, which carries inherent risk in most systems. Every piece of LLM-generated Python runs inside a restricted interpreter with a fixed import whitelist: `pandas`, `numpy`, `matplotlib`, `seaborn`, `scipy`, `sklearn`. The `open()` builtin is removed. OS, socket, and subprocess modules are inaccessible at the interpreter level. A 30-second thread-based timeout terminates any runaway or malicious execution. No data can leave the machine through generated code.
-
-**Layer 3: Session isolation**
-Every file upload is assigned a UUID. Each session maintains its own database file, its own in-memory cache, and its own connection object. No session can read, query, or infer data from another session.
-
-**Layer 4: Sensitive column masking**
-Users can flag individual columns as sensitive before querying. When a flagged column appears in a result, the Explain Agent is bypassed entirely. No LLM processes values from those columns, even indirectly.
-
-**Layer 5: Input validation and query safety**
-Accepted file extensions: `.csv`, `.xlsx`, `.xls`, `.json`, `.tsv`. Maximum upload size: 50 MB. Column names are normalised on ingest. All database queries use identifier quoting and parameterisation to prevent injection.
-
-```
-Data boundary, enforced at every step:
-
-  User uploads file
-        |
-        v
-  Preprocessing Wizard (local, in-memory only)
-        |
-        v
-  Analytical DB (local server, cleaned data)
-        |
-        v
-  Schema extracted (names + types only)
-        |
-        v
-  Sent to LLM
-        |
-  Raw data stops here, always
-```
-
----
-
 ## How DataTalk Compares
 
 Most natural language data tools send your data to a remote model to generate answers. DataTalk inverts this: the intelligence comes to your data, not the other way around.
@@ -245,6 +354,9 @@ Most natural language data tools send your data to a remote model to generate an
 | Data quality visibility | Not surfaced | Missing value analysis, duplicate detection, 3-sigma anomaly flags |
 | Data cleaning before analysis | Not available | Interactive preprocessing wizard with user-controlled rules and full audit trail |
 | Multi-table analysis | Single dataset only | Multiple datasets with automatic JOIN query generation |
+| Regulatory compliance checking | None | Deterministic rule engine: RBI IRAC, PSL ratio, PMLA CTR, DPDP PII blocking |
+| Compliance policy Q&A | None | RAG over embedded regulatory KB (RBI, PMLA, DPDP Act) — no external vector DB |
+| Access control | None | Password-authenticated entry gate before any data is accessible |
 
 ---
 
@@ -253,6 +365,14 @@ Most natural language data tools send your data to a remote model to generate an
 **Ask in plain English, get instant answers.** No SQL, no training, no waiting on a data team. Just type your question and the system figures out the rest.
 
 **Multi-agent pipeline that picks the right tool for the job.** SQL for aggregations, sandboxed Python for statistics and ML, web search for external context. You don't choose the agent. The orchestrator does.
+
+**Compliance gateway on every query.** PII-requesting queries are blocked before they reach any data agent, with the applicable regulation cited. Every result is automatically post-validated against RBI NPA, PSL, PMLA, and DPDP Act rules — without any manual compliance workflow.
+
+**Ask compliance questions in plain English.** "What is the RBI rule on NPA classification?" or "What are the PMLA CTR thresholds?" return cited policy answers directly from the embedded knowledge base.
+
+**Upload your own compliance documents.** Drag in any PDF policy document and the system extracts it, indexes it into the knowledge base, and uses it for future queries — live, no restart needed.
+
+**Password-protected access.** The entire application is gated behind authentication, ensuring only authorised users can access financial datasets and analysis tools.
 
 **Multi-table analysis across datasets.** Upload multiple files into one session and ask questions that span all of them. The AI writes the JOINs for you, automatically.
 
@@ -272,6 +392,8 @@ Most natural language data tools send your data to a remote model to generate an
 
 **Data cleaning built right into the upload flow.** The preprocessing wizard auto-fixes safe issues, flags risky ones for your approval, and gives you full control before any analysis starts.
 
+**NatWest brand identity.** Light-theme-first design with NatWest's deep purple and magenta palette, built for enterprise-grade financial services presentation.
+
 **Supports CSV, Excel, JSON, and TSV.** Upload files up to 50 MB. The system handles parsing, type detection, and schema extraction on its own.
 
 ---
@@ -287,7 +409,9 @@ Most natural language data tools send your data to a remote model to generate an
 | Analytics | scikit-learn, scipy, matplotlib, seaborn |
 | LLM | Any provider via API (configured in `.env`) |
 | PDF reports | ReportLab |
+| PDF ingestion | pypdf (compliance document upload and extraction) |
 | Web search | DuckDuckGo (no API key required) |
+| Compliance KB | scikit-learn TF-IDF (no external vector DB) |
 
 ---
 
@@ -313,6 +437,8 @@ cd backend
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
+
+The compliance knowledge base is loaded automatically at startup. You will see a log line confirming the number of policy document chunks indexed.
 
 ### 3. Frontend
 
@@ -346,11 +472,26 @@ Upload any structured dataset, then ask in plain English:
 -> Signups up 5%, churn stable, average handle time improved by 12 seconds.
 ```
 
+**Compliance query examples:**
+
+```
+"What is the RBI rule on NPA classification?"
+-> Under RBI IRAC norms, a loan account with 61–90 DPD should be classified as SMA-2...
+
+"Flag any loans in my dataset that breach IRAC classification rules"
+-> 3 accounts found with 61–90 DPD marked as Standard. Correct classification under RBI circular RBI/2021-22/125 is SMA-2.
+
+"Are there any cash transactions I need to file CTRs for?"
+-> 7 transactions at or above ₹10 lakh detected. Total value: ₹93.4 lakh. CTR filing required under PMLA 2002, Section 12.
+```
+
 ---
 
 ## Architecture Notes & Decisions Explained
 
 The application uses a multi-agent orchestration pattern. The Orchestrator classifies each incoming question into one of five intent categories and routes it to the appropriate specialist agent. Agents use the LLM only to translate intent into executable SQL or Python. Execution happens locally against the embedded analytical database, so the LLM acts as a translator, not a data processor.
+
+The Compliance Agent sits outside the main agent routing path and operates at the API boundary. It runs before the orchestrator (pre-screen) and after the agent returns a result (post-validate), ensuring compliance checks are independent of which agent handled the query. The deterministic rule engine in post-validate uses no LLM — it applies pattern-matching and threshold checks directly against the structured result data.
 
 DuckDB was selected for its columnar storage model, embedded execution with zero server infrastructure, and native support for Pandas DataFrames. Each session writes to its own isolated database file, ensuring complete data separation between users.
 
@@ -368,18 +509,21 @@ Multi-table analysis extends this foundation by allowing multiple cleaned datase
 DataTalk/
 ├── backend/
 │   ├── app/
-│   │   ├── agents/       # Orchestrator, SQL, Code, Search, Explain agents
-│   │   ├── core/         # DB manager, schema analysis, confidence scoring
-│   │   ├── routes/       # Upload, chat, preprocess/apply, semantic layer, PDF export
-│   │   └── utils/        # LLM client, Python sandbox, PDF generator, preprocessor
+│   │   ├── agents/            # Orchestrator, SQL, Code, Search, Explain, Compliance agents
+│   │   ├── core/              # DB manager, schema, compliance KB (TF-IDF), compliance rules, confidence scoring
+│   │   ├── routes/            # Upload, chat, preprocess, compliance, export, semantic, models
+│   │   ├── compliance_docs/   # 8 embedded RBI/PMLA/DPDP markdown policy documents
+│   │   ├── models/            # Pre-trained ML models (isolation forest, random forest, etc.)
+│   │   └── utils/             # LLM client, Python sandbox, PDF generator, preprocessor
 │   ├── requirements.txt
 │   └── .env.example
 ├── frontend/
 │   ├── src/
-│   │   ├── components/   # React UI components, DataPreprocessingWizard.jsx
-│   │   ├── hooks/        # Chat state, backend health
-│   │   └── services/     # Axios API client
+│   │   ├── components/        # React UI components incl. AuthGate, CompliancePanel, DataPreprocessingWizard
+│   │   ├── hooks/             # Chat state, backend health
+│   │   ├── context/           # ThemeContext (light/dark mode)
+│   │   └── services/          # Axios API client
 │   └── package.json
-├── docs/                 # Architecture and planning documents
+├── docs/                      # Architecture and planning documents
 └── README.md
 ```
