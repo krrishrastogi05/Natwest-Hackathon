@@ -6,6 +6,8 @@ DataTalk enables any user to ask questions about their data in plain English and
 
 The system is built on three pillars from the NatWest problem statement: **Clarity** (answers non-experts can act on immediately), **Trust** (every response cites its data source, carries a reliability rating, and has passed a compliance gateway), and **Speed** (a multi-agent pipeline routes each question to the right tool automatically, with no manual steps required).
 
+At its architectural core, DataTalk is a **Two-LLM system**: a local compliance model that enforces company guidelines and data protection rules entirely within the organisation's network, and an external intelligence model that handles all analytical work — but only ever sees schema metadata, never actual data values.
+
 ---
 
 ## System Architecture
@@ -22,13 +24,15 @@ graph LR
 
     O -->|Pre-screen| CMP["Compliance\nAgent"]
     CMP -->|RAG lookup| KB[("Compliance KB\nTF-IDF · 8 docs")]
+    CMP -->|PII check\nPolicy Q&A| LLMC["LLM 1\nCompliance Model\nLocal · On-Prem"]
     CMP -->|Cleared| SA["SQL Agent"]
     CMP -->|Cleared| CA["Code Agent"]
     CMP -->|Cleared| WA["Search Agent"]
     CMP -->|Cleared| EA["Explain Agent"]
-    O --> CMP2["Post-validate\nRule Engine"]
+    O --> CMP2["Post-validate\nRule Engine\nNo LLM"]
 
-    SA & CA -->|"Schema Only\nNo Raw Data"| LLM[" Any LLM\nAPI"]
+    O -->|Intent detection\nSchema only| LLMI["LLM 2\nIntelligence Model\nExternal API"]
+    SA & CA & EA -->|"Schema only\nNo data values"| LLMI
 
     SA -->|DuckDB SQL| DB[("DuckDB\nSession")]
     CA --> SB["Python\nSandbox"]
@@ -36,8 +40,9 @@ graph LR
     WA --> WEB[" Web"]
     DB -.->|One .duckdb\nper session| FS[("File\nSystem")]
 
-    style LLM fill:#1e3a8a,color:#fff,stroke:#3b82f6
-    style SB fill:#14532d,color:#fff,stroke:#22c55e
+    style LLMI fill:#1e3a8a,color:#fff,stroke:#3b82f6
+    style LLMC fill:#14532d,color:#fff,stroke:#22c55e
+    style SB fill:#064e3b,color:#fff,stroke:#10b981
     style DB fill:#7c2d12,color:#fff,stroke:#f97316
     style FS fill:#581c87,color:#fff,stroke:#a855f7
     style O fill:#1e293b,color:#fff,stroke:#64748b
@@ -57,10 +62,11 @@ sequenceDiagram
     participant F as Frontend
     participant B as FastAPI
     participant C as Compliance Agent
+    participant LC as LLM 1\n(Compliance · Local)
     participant W as Preprocessing Wizard
     participant O as Orchestrator
     participant A as Agent
-    participant L as LLM API
+    participant LI as LLM 2\n(Intelligence · API)
     participant D as Analytical DB
 
     U->>AG: Enter password
@@ -84,39 +90,111 @@ sequenceDiagram
     U->>F: Ask question in plain English
     F->>B: POST /api/chat
     B->>C: pre_screen() — PII / compliance gate
-    Note over C: Zero-trust LLM prompt<br/>Rejects PII queries with DPDP Act citation
+    C->>LC: Zero-trust prompt (raw query text)
+    Note over LC: Runs locally — query text<br/>never leaves org network
+    LC-->>C: PII detected / cleared
     alt Query blocked
-        C-->>B: Rejection + policy citation
+        C-->>B: Rejection + DPDP Act citation
         B-->>F: Compliance violation response
     else Query cleared
         C-->>B: Cleared
         B->>O: Route question
-        O->>L: Intent detection (schema only, no data values)
-        L-->>O: Agent type selected
+        O->>LI: Intent detection (schema only, no data values)
+        Note over LI: Receives schema only —<br/>no data values ever sent externally
+        LI-->>O: Agent type selected
 
         alt SQL Query or Visualisation
             O->>A: SQL Agent activated
-            A->>L: Schema + question, returns SQL
+            A->>LI: Schema + question, returns SQL
             A->>D: Execute parameterised query
             D-->>A: Result set
         else Statistical Analysis
             O->>A: Code Agent activated
-            A->>L: Schema + question, returns Python code
+            A->>LI: Schema + question, returns Python code
             Note over A: Sandbox: whitelisted libs only<br/>No file I/O · No network · 30 s hard limit
             A->>D: Read local DataFrame
             D-->>A: Data for local computation
         end
 
-        A->>L: Summarise result in plain English
-        L-->>A: Business-friendly explanation
+        A->>LI: Summarise result in plain English
+        LI-->>A: Business-friendly explanation
         A->>C: post_validate() — deterministic rule engine
-        Note over C: Checks result data against<br/>NPA, PSL, PMLA, PII rules — no LLM
+        Note over C: No LLM — checks result data<br/>against NPA, PSL, PMLA, PII rules
         C-->>A: Compliance findings appended
         A-->>B: Answer + chart + confidence score + sources + compliance findings
         B-->>F: Structured response
         F-->>U: Answer, visualisation, source reference, and compliance panel
     end
 ```
+
+---
+
+## Two-LLM Architecture
+
+DataTalk is designed around a deliberate separation of two distinct LLM roles. The core insight is that not all AI calls carry the same data-sovereignty risk — and the architecture reflects that.
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                       TWO-LLM DESIGN                               │
+│                                                                     │
+│   LLM 1 — Compliance / Guardian Model                              │
+│   ┌─────────────────────────────────────────────────────────┐      │
+│   │  Deployment: LOCAL · On-premises · Air-gapped           │      │
+│   │  Sees:  Raw user query text · Policy KB chunks          │      │
+│   │  Does:  PII intent detection · Policy Q&A · Doc extract │      │
+│   │  Why local: Query text may contain sensitive intent      │      │
+│   │             signals → must never egress the org network  │      │
+│   └─────────────────────────────────────────────────────────┘      │
+│                              ↕ firewall                             │
+│   LLM 2 — Intelligence / Analysis Model                            │
+│   ┌─────────────────────────────────────────────────────────┐      │
+│   │  Deployment: EXTERNAL API (Gemini, OpenAI, Mistral…)    │      │
+│   │  Sees:  Schema only — column names + types, nothing else│      │
+│   │  Does:  Intent classification · SQL gen · Code gen      │      │
+│   │         · Natural language summarisation                 │      │
+│   │  Why API-safe: Schema carries zero sensitive payload     │      │
+│   └─────────────────────────────────────────────────────────┘      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### The reasoning behind the split
+
+**Why LLM 1 must be local:**
+When a banker types "show me Aadhaar numbers for customers in the Mumbai branch", the query text itself is a sensitive signal — it reveals intent, context, and potentially customer-identifying references. The compliance model needs to see this raw text to detect PII intent and enforce the DPDP Act. Routing that raw text through a cloud API creates an unnecessary data egress channel. A locally-deployed model keeps every compliance decision within the organisation's network boundary.
+
+**Why LLM 2 is safe as an external API:**
+The intelligence model never receives a single data value. The SQL Agent sends it `column_name TEXT, amount NUMERIC` — not the rows themselves. The Code Agent sends it a column schema. The Explain Agent sends it a summary of computed results. Because the prompt contains only structural metadata with no sensitive payload, calling an external API carries no data-privacy risk.
+
+**The result:** Compliance enforcement is 100% on-premises. The organisation's query logs, PII signals, and policy decisions never leave its network. Meanwhile, the full capability of frontier models is available for analytical work — because those calls are provably safe.
+
+### Role mapping
+
+| | LLM 1 — Compliance Model | LLM 2 — Intelligence Model |
+|---|---|---|
+| Deployment target | Local server — Ollama, llama.cpp, LM Studio, or any local OpenAI-compatible endpoint | External API — Gemini, OpenAI, Anthropic, Mistral, Groq |
+| What it receives | Raw user query text, TF-IDF retrieved policy chunks | Column names and data types only — never data values |
+| Agents / calls | `pre_screen()`, `answer_compliance_question()`, PDF text extraction | Orchestrator intent classification, SQL Agent, Code Agent, Explain Agent |
+| Why this placement | Query text may carry sensitive intent → must stay on-prem | Schema metadata has no sensitive payload → safe to externalise |
+| Post-validate (rule engine) | Neither — deterministic code, no LLM at all | Neither |
+
+### Current state vs. production intent
+
+> **Current demo deployment:** Both LLM 1 and LLM 2 call the same Gemini API endpoint (`GEMINI_API_KEY` / `GEMINI_MODEL` in `.env`). This is a practical convenience for the hackathon — both roles are functionally correct, and the output is identical to the production split.
+>
+> **Production intent:** The compliance agent (`compliance_agent.py`) and all intelligence agents (`sql_agent.py`, `code_agent.py`, etc.) are completely separate code paths with no shared prompt context. Pointing them at different model endpoints requires changing two environment variables. The compliance agent would call a local Ollama/Mistral instance; the intelligence agents would continue calling the Gemini or OpenAI API.
+
+### Candidate local models for LLM 1
+
+Any instruction-tuned model that fits the organisation's hardware can serve as LLM 1. Good candidates:
+
+| Model | Size | Notes |
+|---|---|---|
+| Mistral 7B Instruct | 7B | Strong instruction-following, runs on a single GPU |
+| Llama 3 8B Instruct | 8B | Meta open-weights, excellent for classification tasks |
+| Phi-3 Mini | 3.8B | Runs on CPU-only, suitable for low-resource deployments |
+| Qwen 2.5 7B Instruct | 7B | Strong multilingual and reasoning performance |
+
+All of these can be served locally via [Ollama](https://ollama.com) with an OpenAI-compatible API, requiring only a change to `COMPLIANCE_MODEL_BASE_URL` in `.env`.
 
 ---
 
@@ -231,22 +309,22 @@ Data boundary, enforced at every step:
   Preprocessing Wizard (local, in-memory only)
         |
         v
-  Compliance pre-screen (PII gateway — query rejected here if flagged)
-        |
+  Compliance pre-screen ──→ LLM 1 (local · sees raw query text · never egresses)
+        |                    Rejected here if PII intent detected
         v
   Analytical DB (local server, cleaned data)
         |
         v
-  Schema extracted (names + types only)
+  Schema extracted (column names + types ONLY)
         |
         v
-  Sent to LLM
-        |          Raw data stops here, always
+  Sent to LLM 2 (external API · sees schema only · raw data stops here, always)
+        |
         v
   Result returned
         |
         v
-  Compliance post-validate (deterministic rule engine — no LLM)
+  Compliance post-validate (deterministic rule engine · no LLM at all)
         |
         v
   Response with compliance findings
@@ -357,6 +435,7 @@ Most natural language data tools send your data to a remote model to generate an
 | Regulatory compliance checking | None | Deterministic rule engine: RBI IRAC, PSL ratio, PMLA CTR, DPDP PII blocking |
 | Compliance policy Q&A | None | RAG over embedded regulatory KB (RBI, PMLA, DPDP Act) — no external vector DB |
 | Access control | None | Password-authenticated entry gate before any data is accessible |
+| Compliance model deployment | Cloud (same model as analysis) | Designed for local / on-premises — compliance decisions and query text never egress the org network |
 
 ---
 
@@ -365,6 +444,8 @@ Most natural language data tools send your data to a remote model to generate an
 **Ask in plain English, get instant answers.** No SQL, no training, no waiting on a data team. Just type your question and the system figures out the rest.
 
 **Multi-agent pipeline that picks the right tool for the job.** SQL for aggregations, sandboxed Python for statistics and ML, web search for external context. You don't choose the agent. The orchestrator does.
+
+**Two-LLM architecture — compliance stays local, intelligence scales externally.** A local compliance model enforces company guidelines and data protection rules entirely within the organisation's network. A separate intelligence model handles all analytical work via external API — but only ever sees column names and types, never data values. Compliance decisions never egress. Analytical capability is uncapped.
 
 **Compliance gateway on every query.** PII-requesting queries are blocked before they reach any data agent, with the applicable regulation cited. Every result is automatically post-validated against RBI NPA, PSL, PMLA, and DPDP Act rules — without any manual compliance workflow.
 
@@ -407,7 +488,8 @@ Most natural language data tools send your data to a remote model to generate an
 | Database | DuckDB (embedded columnar store, one isolated file per session) |
 | Data processing | Pandas, NumPy |
 | Analytics | scikit-learn, scipy, matplotlib, seaborn |
-| LLM | Any provider via API (configured in `.env`) |
+| LLM 2 — Intelligence model | Google Gemini (`GEMINI_API_KEY` / `GEMINI_MODEL` in `.env`). Swappable for any OpenAI-compatible API. |
+| LLM 1 — Compliance model | Same Gemini endpoint in demo. Production target: local Ollama / llama.cpp / LM Studio instance (`COMPLIANCE_MODEL_BASE_URL` + `COMPLIANCE_MODEL_NAME`). |
 | PDF reports | ReportLab |
 | PDF ingestion | pypdf (compliance document upload and extraction) |
 | Web search | DuckDuckGo (no API key required) |
@@ -427,7 +509,25 @@ Python 3.11 or later and Node.js 20 or later.
 git clone <repo-url>
 cd DataTalk
 cp backend/.env.example backend/.env
-# Add your LLM API key to backend/.env
+```
+
+Open `backend/.env` and configure your models. The system uses two distinct LLM roles:
+
+```bash
+# ── LLM 2: Intelligence / Analysis model (external API) ──────────────
+# Handles: intent classification, SQL generation, code generation, summarisation
+# Only ever receives schema metadata — never data values
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-2.0-flash
+
+# ── LLM 1: Compliance / Guardian model (local — production intent) ───
+# Handles: PII intent detection, compliance Q&A, PDF extraction
+# Sees raw query text → must stay on-prem in production
+# Demo: leave unset to fall back to the Gemini model above
+# Production: point at a local Ollama / llama.cpp / LM Studio instance
+# COMPLIANCE_MODEL_BASE_URL=http://localhost:11434/v1
+# COMPLIANCE_MODEL_API_KEY=ollama
+# COMPLIANCE_MODEL_NAME=mistral
 ```
 
 ### 2. Backend
@@ -491,7 +591,9 @@ Upload any structured dataset, then ask in plain English:
 
 The application uses a multi-agent orchestration pattern. The Orchestrator classifies each incoming question into one of five intent categories and routes it to the appropriate specialist agent. Agents use the LLM only to translate intent into executable SQL or Python. Execution happens locally against the embedded analytical database, so the LLM acts as a translator, not a data processor.
 
-The Compliance Agent sits outside the main agent routing path and operates at the API boundary. It runs before the orchestrator (pre-screen) and after the agent returns a result (post-validate), ensuring compliance checks are independent of which agent handled the query. The deterministic rule engine in post-validate uses no LLM — it applies pattern-matching and threshold checks directly against the structured result data.
+**Two-LLM design:** The system separates compliance intelligence from analytical intelligence across two distinct model roles. LLM 1 (the Compliance / Guardian model) is designed for local on-premises deployment because it processes raw user query text — which may carry sensitive intent signals such as account references, customer names, or regulatory edge cases. LLM 2 (the Intelligence / Analysis model) is designed for external API access because it only ever processes schema metadata (column names and types), which carries no sensitive payload. The Compliance Agent (`compliance_agent.py`) and all intelligence agents are completely separate code paths with no shared prompt context, making the production split a two-variable config change. In the current demo, both call the same Gemini API endpoint.
+
+The Compliance Agent sits outside the main agent routing path and operates at the API boundary. It runs before the orchestrator (pre-screen) and after the agent returns a result (post-validate), ensuring compliance checks are independent of which agent handled the query. The deterministic rule engine in post-validate uses no LLM at all — it applies pattern-matching and threshold checks directly against the structured result data.
 
 DuckDB was selected for its columnar storage model, embedded execution with zero server infrastructure, and native support for Pandas DataFrames. Each session writes to its own isolated database file, ensuring complete data separation between users.
 
