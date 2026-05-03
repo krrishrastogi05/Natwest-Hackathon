@@ -33,7 +33,7 @@ export default function App() {
   const [stageIdx, setStageIdx]           = useState(0);
   const [mode, setMode]                   = useState('auto');
   const [webSearch, setWebSearch]         = useState(false);
-  const [securityFlash, setSecurityFlash] = useState(false);
+  const [securityFlash, setSecurityFlash] = useState(null); // null | { status, message }
   const stageTimer  = useRef(null);
   const flashTimer  = useRef(null);
 
@@ -72,9 +72,12 @@ export default function App() {
     const last = msgs[msgs.length - 1];
     const status = last?.compliance?.status;
     if (status === 'warning' || status === 'blocked') {
-      setSecurityFlash(true);
+      const annotation = last.compliance?.annotations?.[0];
+      const message = annotation?.message
+        || (status === 'blocked' ? 'Query blocked — compliance policy violation detected' : 'Compliance warning detected');
       clearTimeout(flashTimer.current);
-      flashTimer.current = setTimeout(() => setSecurityFlash(false), 950);
+      setSecurityFlash({ status, message });
+      flashTimer.current = setTimeout(() => setSecurityFlash(null), 1850);
     }
   }, [chat.messages]);
 
@@ -97,7 +100,17 @@ export default function App() {
   return (
     <>
       {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
-      {securityFlash && <div className="security-flash-overlay" />}
+      {securityFlash && (
+        <div className="security-flash-overlay">
+          <div className="security-flash-banner">
+            <span className="security-flash-dot" />
+            <span className="security-flash-label">
+              {securityFlash.status === 'blocked' ? 'Security Block' : 'Compliance Warning'}
+            </span>
+            <span className="security-flash-msg">{securityFlash.message}</span>
+          </div>
+        </div>
+      )}
 
       <div className="app-shell">
         {/* Sidebar */}
