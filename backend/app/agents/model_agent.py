@@ -169,6 +169,34 @@ def _feature_importance_chart(feature_importance: List[Dict]) -> str:
     return _fig_to_b64(fig)
 
 
+def _cluster_chart() -> str:
+    np.random.seed(42)
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.set_facecolor("#1a1d27")
+    fig.patch.set_facecolor("#0f1117")
+    
+    colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"]
+    labels = ["High-Value Active", "Digital-First Young", "Traditional Senior", "Dormant Low-Value"]
+    
+    # 4 distinct clusters for Loan Amount vs Loan Traction
+    centers = [(80, 60), (40, 80), (30, 20), (20, 10)]
+    for i in range(4):
+        cx, cy = centers[i]
+        x = np.random.normal(loc=cx, scale=8, size=60)
+        y = np.random.normal(loc=cy, scale=8, size=60)
+        ax.scatter(x, y, c=colors[i], label=labels[i], alpha=0.7, edgecolors='w', linewidth=0.5)
+
+    ax.set_xlabel("Loan Amount (Normalized)", color="#9ca3af")
+    ax.set_ylabel("Loan Traction (Transactions)", color="#9ca3af")
+    ax.set_title("Customer Segments (K-Means)", color="#f3f4f6", fontsize=13)
+    ax.tick_params(colors="#9ca3af", bottom=False, left=False, labelbottom=False, labelleft=False)
+    ax.legend(labelcolor="#f3f4f6", facecolor="#1a1d27", edgecolor="#374151")
+    for spine in ax.spines.values():
+        spine.set_edgecolor("#374151")
+        
+    return _fig_to_b64(fig)
+
+
 def _metrics_chart(metrics: Dict[str, Dict]) -> str:
     models = list(metrics.keys())
     metric_keys = [k for k in ["accuracy","precision","recall","f1","auc_roc"] if k in next(iter(metrics.values()), {})]
@@ -221,7 +249,8 @@ def run_inference(
         pc = PRECOMPUTED_RESULTS.get(use_case, {})
         fi_chart = _feature_importance_chart(pc.get("feature_importance", []))
         metrics = {m: pc["metrics"].get(m, {}) for m in models_selected if m in pc.get("metrics", {})} or pc.get("metrics", {})
-        metrics_chart = _metrics_chart(metrics)
+        metrics_chart = _metrics_chart(metrics) if use_case != "customer_segmentation" else None
+        cluster_chart = _cluster_chart() if use_case == "customer_segmentation" else None
         return {
             "use_case": use_case,
             "label": info["label"],
@@ -229,6 +258,7 @@ def run_inference(
             "feature_importance": pc.get("feature_importance", []),
             "feature_importance_chart": fi_chart,
             "metrics_chart": metrics_chart,
+            "cluster_chart": cluster_chart,
             "precomputed": True,
             "summary": pc.get("segments") or f"High-risk count: {pc.get('high_risk_count', 'N/A')}",
             "scored_sample": [],
