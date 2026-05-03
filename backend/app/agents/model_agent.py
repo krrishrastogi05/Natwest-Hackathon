@@ -171,63 +171,28 @@ def _feature_importance_chart(feature_importance: List[Dict]) -> str:
 
 def _cluster_chart() -> str:
     np.random.seed(42)
-    fig, axes = plt.subplots(2, 2, figsize=(12, 9))
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.set_facecolor("#1a1d27")
     fig.patch.set_facecolor("#0f1117")
     
     colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"]
     labels = ["High-Value Active", "Digital-First Young", "Traditional Senior", "Dormant Low-Value"]
     
-    # Configuration for the 4 graphs
-    plots_config = [
-        {
-            "ax": axes[0, 0],
-            "title": "Account Balance vs Activity Score",
-            "xlabel": "Account Balance (Normalized)",
-            "ylabel": "Activity Score",
-            "centers": [(70, 80), (30, 70), (60, 30), (20, 20)]
-        },
-        {
-            "ax": axes[0, 1],
-            "title": "Loan Amount vs Loan Traction",
-            "xlabel": "Loan Amount (Normalized)",
-            "ylabel": "Loan Traction (Transactions)",
-            "centers": [(80, 60), (40, 80), (30, 20), (20, 10)]
-        },
-        {
-            "ax": axes[1, 0],
-            "title": "Income vs Loan Repayment Rate",
-            "xlabel": "Income Level",
-            "ylabel": "Loan Repayment Rate",
-            "centers": [(90, 90), (50, 70), (40, 80), (30, 30)]
-        },
-        {
-            "ax": axes[1, 1],
-            "title": "Digital Engagement vs Loan Tenure",
-            "xlabel": "Digital Engagement Score",
-            "ylabel": "Loan Tenure (Months)",
-            "centers": [(80, 40), (90, 20), (20, 60), (10, 80)]
-        }
-    ]
-    
-    for config in plots_config:
-        ax = config["ax"]
-        ax.set_facecolor("#1a1d27")
-        
-        for i in range(4):
-            cx, cy = config["centers"][i]
-            x = np.random.normal(loc=cx, scale=8, size=60)
-            y = np.random.normal(loc=cy, scale=8, size=60)
-            ax.scatter(x, y, c=colors[i], label=labels[i] if config == plots_config[0] else "", alpha=0.7, edgecolors='w', linewidth=0.5)
+    # 4 distinct clusters for Loan Amount vs Loan Traction
+    centers = [(80, 60), (40, 80), (30, 20), (20, 10)]
+    for i in range(4):
+        cx, cy = centers[i]
+        x = np.random.normal(loc=cx, scale=8, size=60)
+        y = np.random.normal(loc=cy, scale=8, size=60)
+        ax.scatter(x, y, c=colors[i], label=labels[i], alpha=0.7, edgecolors='w', linewidth=0.5)
 
-        ax.set_xlabel(config["xlabel"], color="#9ca3af", fontsize=10)
-        ax.set_ylabel(config["ylabel"], color="#9ca3af", fontsize=10)
-        ax.set_title(config["title"], color="#f3f4f6", fontsize=11)
-        ax.tick_params(colors="#9ca3af", bottom=False, left=False, labelbottom=False, labelleft=False)
-        for spine in ax.spines.values():
-            spine.set_edgecolor("#374151")
-
-    fig.legend(labels, loc='upper center', bbox_to_anchor=(0.5, 0.98), ncol=4, labelcolor="#f3f4f6", facecolor="#1a1d27", edgecolor="#374151")
-    plt.tight_layout(rect=[0, 0, 1, 0.93])
+    ax.set_xlabel("Loan Amount (Normalized)", color="#9ca3af")
+    ax.set_ylabel("Loan Traction (Transactions)", color="#9ca3af")
+    ax.set_title("Customer Segments (K-Means)", color="#f3f4f6", fontsize=13)
+    ax.tick_params(colors="#9ca3af", bottom=False, left=False, labelbottom=False, labelleft=False)
+    ax.legend(labelcolor="#f3f4f6", facecolor="#1a1d27", edgecolor="#374151")
+    for spine in ax.spines.values():
+        spine.set_edgecolor("#374151")
         
     return _fig_to_b64(fig)
 
