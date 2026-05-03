@@ -394,6 +394,17 @@ export default function ModelLab({ isOpen, onClose, sessionId, schema = [], onDi
                 </div>
               )}
 
+              {result.cluster_chart && (
+                <div style={{ marginBottom: 16 }}>
+                  <p className="model-lab-section-label">Cluster Distribution (K-Means)</p>
+                  <img
+                    src={`data:image/png;base64,${result.cluster_chart}`}
+                    alt="Cluster distribution"
+                    style={{ width: '100%', borderRadius: 8, border: '1px solid var(--border)' }}
+                  />
+                </div>
+              )}
+
               {result.metrics_chart && (
                 <div style={{ marginBottom: 16 }}>
                   <p className="model-lab-section-label">Metrics Comparison</p>
