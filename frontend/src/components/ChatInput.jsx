@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Send, Paperclip, Mic, MicOff } from 'lucide-react';
 import ModeSelector from './ModeSelector';
 import WebSearchToggle from './WebSearchToggle';
+import ModelSwitcher from './ModelSwitcher';
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 const isSpeechSupported = !!SpeechRecognition;
@@ -54,10 +55,11 @@ export default function ChatInput({
 
   return (
     <form onSubmit={submit}>
-      {/* Mode selector + web search toggle row */}
+      {/* Mode selector + web search toggle + model switcher row */}
       <div className="input-controls-row">
         <ModeSelector mode={mode} onChange={onModeChange} disabled={disabled} />
         <WebSearchToggle enabled={webSearch} onChange={onWebSearchChange} disabled={disabled} />
+        <ModelSwitcher />
       </div>
 
       <div className="input-box">
