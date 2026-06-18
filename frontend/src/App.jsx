@@ -13,7 +13,6 @@ import ModelLab from './components/ModelLab';
 import FinancialGlobe from './components/FinancialGlobe';
 import CompliancePanel from './components/CompliancePanel';
 import { useChat } from './hooks/useChat';
-import AuthGate from './components/AuthGate';
 
 const PROCESSING_STAGES = [
   'Analyzing your question…',
@@ -23,7 +22,6 @@ const PROCESSING_STAGES = [
 ];
 
 export default function App() {
-  const [authed, setAuthed]               = useState(false);
   const [showSplash, setShowSplash]       = useState(true);
   const [sidebarOpen, setSidebarOpen]     = useState(true);
   const [showUpload, setShowUpload]       = useState(false);
@@ -94,8 +92,6 @@ export default function App() {
   }, [chat, mode, webSearch]);
 
   const hasMessages = chat.messages.length > 0;
-
-  if (!authed) return <AuthGate onAuth={() => setAuthed(true)} />;
 
   return (
     <>
