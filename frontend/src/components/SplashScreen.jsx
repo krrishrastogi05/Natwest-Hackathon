@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowRight, Shield, FlaskConical, CheckCircle2, Play, BarChart3, Sparkles } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Cpu, Play, BarChart3, Sparkles, Lock, Bot, Activity } from 'lucide-react';
 
 const DEMO_VIDEO_SRC = '/demo.mp4';
 const DEMO_VIDEO_FALLBACK = 'https://github.com/user-attachments/assets/936c42e9-4a5b-4fc3-8b03-3b8ef8cbb8db';
@@ -7,29 +7,37 @@ const DEMO_POSTER = '';
 
 const HIGHLIGHT_CARDS = [
   {
-    icon: Shield,
+    icon: ShieldCheck,
     accent: '#10b981',
-    label: 'Security First',
-    headline: 'Zero-trust by default',
-    body: 'End-to-end data masking, sensitive-column detection, audit trails, and real-time compliance guardrails on every query.',
+    badge: 'SECURITY FIRST',
+    headline: 'Zero-Trust Guardrails by Default',
+    body: 'Automated PII masking, query sanitization, audit logging, and real-time regulatory compliance active out of the box.',
+    featured: true,
   },
   {
-    icon: FlaskConical,
+    icon: Bot,
     accent: '#6366f1',
-    label: 'Python ML Engine',
-    headline: 'Full analytics power',
-    body: 'Sandboxed Python with pandas, scikit-learn & matplotlib. Run regressions, clustering and forecasts — no code needed.',
+    badge: 'AGENTIC AI',
+    headline: 'Autonomous Multi-Agent Workflows',
+    body: 'Self-correcting AI agents orchestrate schema discovery, SQL synthesis, statistical modeling, and insight generation.',
   },
   {
-    icon: CheckCircle2,
-    accent: '#f43f5e',
-    label: 'Compliance Ready',
-    headline: 'Regulatory out of the box',
-    body: 'PMLA / AML, KYC / CDD, DPDP Act 2023 and IRAC norms — every response validated against live compliance rules.',
+    icon: Cpu,
+    accent: '#ec4899',
+    badge: 'ISOLATED SANDBOX',
+    headline: 'Secure Python ML Runtime',
+    body: 'Sandboxed analytics environment running pandas, scikit-learn, and matplotlib with total data boundary isolation.',
   },
 ];
 
-const SECONDARY = ['Natural-Language SQL', 'Interactive Charts', 'PDF Audit Reports', 'Web Search', 'Schema Explorer'];
+const SECONDARY = [
+  'Agentic Query Engine',
+  'Natural-Language SQL',
+  'Deterministic Guardrails',
+  'Interactive Charts',
+  'PDF Audit Logs',
+  'Real-Time Web Search',
+];
 
 export default function SplashScreen({ onComplete }) {
   const [fadeOut, setFadeOut] = useState(false);
@@ -41,38 +49,39 @@ export default function SplashScreen({ onComplete }) {
   };
 
   const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
     .lp-root {
       position: fixed; inset: 0; z-index: 100;
       background: #09090b;
-      font-family: 'Inter', sans-serif;
+      font-family: 'Plus Jakarta Sans', sans-serif;
       color: #f4f4f5;
       overflow-y: auto;
       transition: opacity 0.5s ease;
     }
     .lp-root.lp-out { opacity: 0; pointer-events: none; }
 
-    /* Subtle background glow behind the video center */
+    /* Animated background glow */
     .lp-glow {
       position: fixed;
-      top: 35%; left: 50%;
+      top: 25%; left: 50%;
       transform: translate(-50%, -50%);
-      width: 800px; height: 500px;
-      background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(16, 185, 129, 0.05) 45%, transparent 70%);
-      filter: blur(80px);
+      width: 900px; height: 500px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, rgba(16, 185, 129, 0.08) 50%, transparent 75%);
+      filter: blur(100px);
       pointer-events: none;
       z-index: 0;
+      animation: lp-pulse 8s ease-in-out infinite alternate;
     }
 
     .lp-wrap {
       position: relative; z-index: 1;
-      max-width: 1100px; margin: 0 auto;
+      max-width: 1120px; margin: 0 auto;
       padding: 0 24px 64px;
       box-sizing: border-box;
     }
 
-    /* ── Nav ── */
+    /* Nav */
     .lp-nav {
       display: flex; align-items: center; justify-content: space-between;
       padding: 28px 0 20px;
@@ -81,85 +90,98 @@ export default function SplashScreen({ onComplete }) {
     .lp-brand-mark {
       width: 38px; height: 38px; border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
-      background: linear-gradient(135deg, #6366f1, #4f46e5);
-      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+      background: linear-gradient(135deg, #6366f1 0%, #10b981 100%);
+      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.25);
     }
     .lp-brand-name {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: 22px; font-weight: 800; letter-spacing: -0.03em; color: #fff;
+      font-size: 22px; font-weight: 800; letter-spacing: -0.03em; color: #ffffff;
     }
-    .lp-team {
-      font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
-      color: #a1a1aa; background: #18181b; border: 1px solid #27272a;
+    .lp-status-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+      color: #10b981; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25);
       padding: 6px 14px; border-radius: 99px;
     }
+    .lp-status-dot { width: 6px; height: 6px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981; }
 
-    /* ── Header / Intro ── */
+    /* Hero */
     .lp-header {
       text-align: center;
-      max-width: 760px;
-      margin: 32px auto 40px;
+      max-width: 800px;
+      margin: 36px auto 44px;
     }
 
     .lp-badge {
       display: inline-flex; align-items: center; gap: 8px;
-      padding: 6px 14px; border-radius: 99px; margin-bottom: 20px;
-      border: 1px solid rgba(99, 102, 241, 0.3);
-      background: rgba(99, 102, 241, 0.08);
-      font-size: 12px; font-weight: 600; color: #818cf8; letter-spacing: 0.01em;
+      padding: 6px 16px; border-radius: 99px; margin-bottom: 22px;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      background: rgba(16, 185, 129, 0.08);
+      font-size: 12px; font-weight: 600; color: #34d399; letter-spacing: 0.02em;
     }
 
     .lp-h1 {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: clamp(40px, 5vw, 64px);
-      font-weight: 800; line-height: 1.08; letter-spacing: -0.03em; margin: 0 0 18px;
+      font-size: clamp(42px, 5.2vw, 68px);
+      font-weight: 800; line-height: 1.05; letter-spacing: -0.03em; margin: 0 0 20px;
       color: #ffffff;
     }
-    .lp-h1 .g {
+    .lp-h1 .g-agent {
       background: linear-gradient(120deg, #818cf8 0%, #c084fc 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .lp-h1 .g-guard {
+      background: linear-gradient(120deg, #34d399 0%, #10b981 100%);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     }
     .lp-tagline {
       font-size: clamp(15px, 1.3vw, 18px); font-weight: 400; line-height: 1.6;
-      color: #a1a1aa; max-width: 640px; margin: 0 auto 28px;
+      color: #a1a1aa; max-width: 680px; margin: 0 auto 32px;
     }
     .lp-tagline strong { color: #f4f4f5; font-weight: 600; }
 
     .lp-cta-row { display: flex; align-items: center; justify-content: center; gap: 14px; }
     .lp-cta {
       display: inline-flex; align-items: center; gap: 10px;
-      padding: 14px 32px; border-radius: 99px; border: none; cursor: pointer;
-      background: #6366f1; color: #fff;
-      font-family: 'Plus Jakarta Sans', sans-serif; font-size: 15px; font-weight: 700;
-      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
-      transition: all 0.2s ease;
+      padding: 15px 34px; border-radius: 99px; border: none; cursor: pointer;
+      background: #ffffff; color: #09090b;
+      font-size: 15px; font-weight: 700;
+      box-shadow: 0 4px 24px rgba(255, 255, 255, 0.15);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .lp-cta:hover { transform: translateY(-2px); background: #4f46e5; box-shadow: 0 12px 32px rgba(99, 102, 241, 0.45); }
+    .lp-cta:hover { transform: translateY(-2px); background: #f4f4f5; box-shadow: 0 8px 32px rgba(255, 255, 255, 0.25); }
     .lp-cta .arr { transition: transform 0.2s; }
     .lp-cta:hover .arr { transform: translateX(4px); }
-    
-    /* ── Hero Video (Centerpiece) ── */
+
+    .lp-sec-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 12px; color: #71717a; margin-top: 14px; font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Video Section */
     .lp-hero-video-container {
-      max-width: 960px;
-      margin: 0 auto 56px;
+      max-width: 980px;
+      margin: 0 auto 52px;
     }
     .lp-video-frame {
       position: relative;
       border-radius: 16px;
       border: 1px solid #27272a;
-      background: #18181b;
-      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255,255,255,0.05);
+      background: #121215;
+      box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255,255,255,0.05);
       overflow: hidden;
+      transition: border-color 0.3s;
     }
+    .lp-video-frame:hover { border-color: #3f3f46; }
     .lp-video-bar {
-      display: flex; align-items: center; gap: 8px;
-      padding: 12px 16px; background: #0f0f11;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 18px; background: #0c0c0e;
       border-bottom: 1px solid #27272a;
     }
-    .lp-video-bar i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-    .lp-video-bar .r { background: #ef4444; } .lp-video-bar .y { background: #f59e0b; } .lp-video-bar .gn { background: #10b981; }
-    .lp-video-bar span {
-      margin-left: 8px; font-size: 12px; color: #71717a; font-weight: 500; font-family: monospace;
+    .lp-video-dots { display: flex; align-items: center; gap: 8px; }
+    .lp-video-dots i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .lp-video-dots .r { background: #ef4444; } .lp-video-dots .y { background: #f59e0b; } .lp-video-dots .gn { background: #10b981; }
+    .lp-video-title {
+      font-size: 11px; color: #71717a; font-weight: 500; font-family: 'JetBrains Mono', monospace;
+      display: flex; align-items: center; gap: 6px;
     }
     .lp-video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #000; object-fit: cover; }
     .lp-video-fallback {
@@ -173,41 +195,48 @@ export default function SplashScreen({ onComplete }) {
       background: #27272a; color: #fff;
     }
     .lp-video-fallback p { font-size: 13px; color: #a1a1aa; max-width: 320px; line-height: 1.5; }
-    .lp-video-fallback code { color: #818cf8; font-size: 12px; }
+    .lp-video-fallback code { color: #34d399; font-size: 12px; }
 
-    /* ── Feature cards ── */
-    .lp-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 36px; }
+    /* Feature Cards */
+    .lp-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 40px; }
     .lp-card {
-      border-radius: 14px; border: 1px solid #27272a;
-      background: #121215; padding: 22px; text-align: left;
-      transition: all 0.2s ease;
+      position: relative; border-radius: 14px; border: 1px solid #27272a;
+      background: #121215; padding: 24px; text-align: left;
+      transition: all 0.25s ease;
     }
-    .lp-card:hover { background: #18181b; border-color: #3f3f46; transform: translateY(-2px); }
-    .lp-card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-    .lp-card-icon { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .lp-card-chip {
-      font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
-      padding: 3px 8px; border-radius: 6px; border: 1px solid;
+    .lp-card:hover { background: #18181b; border-color: #3f3f46; transform: translateY(-3px); }
+    .lp-card.featured {
+      border-color: rgba(16, 185, 129, 0.4);
+      background: linear-gradient(180deg, rgba(16, 185, 129, 0.05) 0%, #121215 100%);
     }
-    .lp-card-headline { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 8px; color: #f4f4f5; }
-    .lp-card-body { font-size: 13px; color: #71717a; line-height: 1.55; }
+    .lp-card.featured:hover { border-color: rgba(16, 185, 129, 0.7); }
 
-    /* ── Secondary pills ── */
-    .lp-secondary { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+    .lp-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .lp-card-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+    .lp-card-chip {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+      padding: 4px 8px; border-radius: 6px; border: 1px solid;
+    }
+    .lp-card-headline { font-size: 17px; font-weight: 700; margin-bottom: 8px; color: #f4f4f5; letter-spacing: -0.01em; }
+    .lp-card-body { font-size: 13px; color: #8a8a93; line-height: 1.6; }
+
+    /* Secondary Pills */
+    .lp-secondary { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
     .lp-pill {
       font-size: 12px; font-weight: 500; color: #a1a1aa;
-      padding: 6px 14px; border-radius: 99px; border: 1px solid #27272a;
+      padding: 7px 16px; border-radius: 99px; border: 1px solid #27272a;
       background: #121215; transition: all 0.2s;
     }
-    .lp-pill:hover { color: #f4f4f5; border-color: #3f3f46; }
+    .lp-pill:hover { color: #f4f4f5; border-color: #3f3f46; background: #18181b; }
 
-    /* ── Animations ── */
-    .a { animation: lp-up 0.5s ease-out both; }
-    @keyframes lp-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    /* Animations */
+    .a-up { animation: lp-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+    @keyframes lp-up { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes lp-pulse { 0% { opacity: 0.6; } 100% { opacity: 1; } }
 
-    @media (max-width: 820px) {
+    @media (max-width: 900px) {
       .lp-cards { grid-template-columns: 1fr; }
-      .lp-header { margin-top: 16px; }
+      .lp-header { margin-top: 20px; }
     }
   `;
 
@@ -218,45 +247,56 @@ export default function SplashScreen({ onComplete }) {
         <div className="lp-glow" />
 
         <div className="lp-wrap">
-          {/* Nav */}
-          <nav className="lp-nav a">
+          {/* Top Navigation */}
+          <nav className="lp-nav a-up">
             <div className="lp-brand">
               <div className="lp-brand-mark"><BarChart3 size={20} color="#fff" /></div>
               <span className="lp-brand-name">DataTalk</span>
             </div>
-            <span className="lp-team">Swords of Summer</span>
+            <div className="lp-status-pill">
+              <span className="lp-status-dot" /> Enterprise Guardrails Active
+            </div>
           </nav>
 
-          {/* Header Section */}
-          <div className="lp-header a" style={{ animationDelay: '0.05s' }}>
+          {/* Hero Section */}
+          <div className="lp-header a-up" style={{ animationDelay: '0.06s' }}>
             <div className="lp-badge">
-              <Sparkles size={13} />
-              AI-Powered Analytics & Compliance Engine
+              <ShieldCheck size={14} /> Zero-Trust AI & Security Guardrails
             </div>
-            <h1 className="lp-h1">Talk to your <span className="g">Data.</span></h1>
+            <h1 className="lp-h1">
+              Talk to your Data with <span className="g-agent">Agentic AI.</span>
+            </h1>
             <p className="lp-tagline">
-              Run complex analytics, ML models &amp; compliance checks —{' '}
-              <strong>without writing a single line of code.</strong>
+              Autonomous AI agents run complex SQL, statistical modeling, and ML workflows — 
+              backed by <strong>default enterprise guardrails and zero-trust security</strong>.
             </p>
             <div className="lp-cta-row">
               <button className="lp-cta" onClick={handleOpen}>
                 Launch Platform <ArrowRight size={16} className="arr" />
               </button>
             </div>
+            <div className="lp-sec-pill">
+              <Lock size={12} /> Air-Gapped Python Sandbox · Row-Level Security
+            </div>
           </div>
 
-          {/* Video Centerpiece */}
-          <div className="lp-hero-video-container a" style={{ animationDelay: '0.12s' }}>
+          {/* Center Showcase: Demo Video */}
+          <div className="lp-hero-video-container a-up" style={{ animationDelay: '0.12s' }}>
             <div className="lp-video-frame" id="demo">
               <div className="lp-video-bar">
-                <i className="r" /><i className="y" /><i className="gn" />
-                <span>datatalk-demo-overview.mp4</span>
+                <div className="lp-video-dots">
+                  <i className="r" /><i className="y" /><i className="gn" />
+                </div>
+                <div className="lp-video-title">
+                  <Activity size={12} color="#10b981" /> agentic_workflow_execution.mp4
+                </div>
+                <div style={{ width: 40 }} />
               </div>
               {videoErr ? (
                 <div className="lp-video-fallback">
                   <div className="pl"><Play size={22} /></div>
                   <p>
-                    Demo video file missing. Place your file at{' '}
+                    Demo recording file missing. Place video at{' '}
                     <code>frontend/public/demo.mp4</code>
                   </p>
                 </div>
@@ -284,18 +324,18 @@ export default function SplashScreen({ onComplete }) {
             </div>
           </div>
 
-          {/* Feature cards */}
-          <div className="lp-cards a" style={{ animationDelay: '0.18s' }}>
+          {/* Core Feature Highlights */}
+          <div className="lp-cards a-up" style={{ animationDelay: '0.18s' }}>
             {HIGHLIGHT_CARDS.map((c) => {
               const Icon = c.icon;
               return (
-                <div key={c.label} className="lp-card">
+                <div key={c.badge} className={`lp-card${c.featured ? ' featured' : ''}`}>
                   <div className="lp-card-top">
                     <div className="lp-card-icon" style={{ background: `${c.accent}15`, border: `1px solid ${c.accent}30` }}>
-                      <Icon size={16} style={{ color: c.accent }} />
+                      <Icon size={18} style={{ color: c.accent }} />
                     </div>
-                    <span className="lp-card-chip" style={{ color: c.accent, borderColor: `${c.accent}30`, background: `${c.accent}10` }}>
-                      {c.label}
+                    <span className="lp-card-chip" style={{ color: c.accent, borderColor: `${c.accent}35`, background: `${c.accent}10` }}>
+                      {c.badge}
                     </span>
                   </div>
                   <div className="lp-card-headline">{c.headline}</div>
@@ -305,8 +345,8 @@ export default function SplashScreen({ onComplete }) {
             })}
           </div>
 
-          {/* Secondary pills */}
-          <div className="lp-secondary a" style={{ animationDelay: '0.24s' }}>
+          {/* Secondary Capabilities */}
+          <div className="lp-secondary a-up" style={{ animationDelay: '0.24s' }}>
             {SECONDARY.map((s) => <span key={s} className="lp-pill">{s}</span>)}
           </div>
         </div>
